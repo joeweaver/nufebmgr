@@ -5,7 +5,7 @@ NUFEB (Newcastle University Frontier in Engineering Biology) is an open source t
 https://github.com/joeweaver/nufeb-designer
 nufebmgr is a python package which aims to streamline creating NUFEB inputs by 'speaking in the language of biologists'. It allows programmatic genreation of configuration files at a high level of abstraction. It is also used to enable interactive generation via the nufeb-designer GUI application.
 
-Development was funded by the USF NSF Postdoctoral Research Fellowship in Biology Award #2007151.
+Development was funded by the US NSF Postdoctoral Research Fellowship in Biology Award #2007151.
 
 Because nufebmgr is under active development and experimental, we would like you contact us if you use it. We'd enjoy hearing about how we could make it better AND we'd like to have a list of people to contact if major bugs are found. The best person to contact at this time would be Joseph E. Weaver: joe.weaver@newcastle.ac.uk
 
