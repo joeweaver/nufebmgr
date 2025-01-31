@@ -101,6 +101,9 @@ Placing initial bacteria positions has long been an issue with NUFEB ease of use
 
 Each pixel in the image represents 1 micron (so a 100x50 micron simulation plane would be represented by a 100 pixel wide and 50 pixel tall image) and the colour of the pixels represents taxa identies. Fully white pixels indicate no taxa present at that location.
 
+<p align="center">
+  <img src="https://github.com/joeweaver/nufebmgr/blob/main/doc/images/zoomed_simple.png" | width=500/>
+</p>
 The colours are mapped to specific identies by a user-provide python dictionary where each colour code is associated with a taxon name (example below). The taxon names are assumed to be provided either by ingesting a taxa library file or by using the built-in templates.
 
 ```python
