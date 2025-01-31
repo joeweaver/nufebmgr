@@ -1,0 +1,9 @@
+.idea
+__pycache__
+*.egg-info
+dev
+examples/*/atom.in
+examples/*/inputscript.nufeb
+examples/*/hdf5
+examples/*/vtk
+examples/*/log.lammps

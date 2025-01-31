@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["nufebmgr"]
+
+[project]
+name = "nufebmgr"
+version = "0.0.1"
+description = "Python-based setup of NUFEB runs"
+authors = [
+    { name = "Joseph Earl Weaver", email = "joe.e.weaver@gmail.com" }
+]
+
+dependencies = ["numpy>=2.2.0",
+                "pandas>=2.2.0",
+                "jinja2>=3.1.0",
+                "opencv-python>=4.9.0"]
+
+# Optional, but highly recommended for PyPI releases
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
