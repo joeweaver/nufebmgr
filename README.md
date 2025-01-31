@@ -60,7 +60,11 @@ While the built-in templates are nice for getting started, many users will want 
 
 The relevant method call is ``add_taxon_by_jsonfile(filename)``
 
-The json file is very similar to a python dictionary of dictionaries.  Each taxon entry begins with a name which contains a ``growth_strategy`` and ``division_stragey`` compound entry. It must also contain ``diameter``, ``density``, ``outer_diameter``, and ``morphology`` entries. It may optionally contain a ``description`` entry.  The ``growth_strategy`` and ``division_strategy`` entries must contain a ``name`` which maps to the relevant NUFEB biological fix and additional entries used to fill in the fix-specific parameters.  Here is an example of a library containing a single taxon, named 'foo' with a heterotrophic growth strategy and coccus division strategy.
+The json file is very similar to a python dictionary of dictionaries.  Each taxon entry begins with a name which contains a ``growth_strategy`` and ``division_stragey`` compound entry. It must also contain ``diameter``, ``density``, ``outer_diameter``, and ``morphology`` entries. It may optionally contain a ``description`` entry.  The ``growth_strategy`` and ``division_strategy`` entries must contain a ``name`` which maps to the relevant NUFEB biological fix and additional entries used to fill in the fix-specific parameters. 
+
+An easy way to create custom taxa libraries is to use the ``Taxa Manager`` UI within nufeb-designer.
+
+Here is an example of a library containing a single taxon, named 'foo' with a heterotrophic growth strategy and coccus division strategy.
 
 ```json
 {     
