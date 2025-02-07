@@ -41,7 +41,7 @@ We have tried to make the order of calls within the context not matter, and we a
 
 # Examples
 
-There are four examples located in the ``examples`` directory. Each contains at least a ``main.py`` script as well as potential supporting files. These examples are intended to be plain showcases of the main nufebmgr functions.
+There are multiples examples located in the ``examples`` directory. Each contains at least a ``main.py`` script as well as potential supporting files. These examples are intended to be plain showcases of the main nufebmgr functions.
 
 ## Hello, world: simple_starter
 
@@ -144,6 +144,33 @@ with NufebProject() as prj:
 
     # define T6SS vulnerable taxon
     prj.vuln_t6ss(taxon="immune", effector="toxin_a", prob=1, to_group="vuln_intoxicated")
+```
+
+## Random layout, but without overlap or getting to close: poisson_layout
+
+The simulation space will be filled with randomly placed organisms subject to the caveat that can be no closer than a minimum distance from each other.
+This is achieved with a poisson disc layout.
+```python
+        layout_poisson(radius=8)
+```
+
+The layout is strongly based on the code provided by # Via Christian Hill
+
+See also:
+
+https://scipython.com/blog/power-spectra-for-blue-and-uniform-noise/
+
+https://github.com/scipython/scipython-maths/tree/master/poisson_disc_sampled_noise
+
+Bridson's work https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
+
+## Assignment to horizontal and vertical strips: noisy_strips
+
+After placement, bacteria can be assigned to evenly spaced strips.  These assignments can also be variably (0-100) noisy.
+
+For a low amount of noise in horizontal strips:
+```python
+    distribute_even_strips("horizontal", noise=20)
 ```
 
 # Limitations

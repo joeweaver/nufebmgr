@@ -48,29 +48,12 @@ class TaxaAssignmentManager:
         absolute_abundances = total_counts.to_dict()
         relative_abundances = (total_counts / total_counts.sum()).to_dict()
 
-        # choose new A's
-        potA = to_reassign
-        a_reassigned = potA.sample(absolute_abundances['basic_het']) #frac=relative_abundances['basic_het'])
-        a_reassigned['taxon_name'] = 'basic_het'
+        reassignments = [nonshuffled]
+        potentials = to_reassign
+        for taxon in taxa_names:
+            reassigned = potentials.sample(absolute_abundances[taxon])
+            reassigned['taxon_name'] = taxon
+            reassignments.append(reassigned)
+            potentials = potentials.drop(reassigned.index)
 
-
-        # choose new B's
-        potB = to_reassign.drop(a_reassigned.index)
-
-        b_reassigned = potB.sample(absolute_abundances['small_het'])
-        b_reassigned['taxon_name'] = 'small_het'
-
-        potC = to_reassign.drop(a_reassigned.index).drop(b_reassigned.index)
-        pass
-        n_rows,_ = potC.shape
-        if n_rows != absolute_abundances['slow_het']:
-            raise "Error"
-        c_reassigned = potC.sample(absolute_abundances['slow_het'])  # count_c_species / potC.species.count())
-        c_reassigned['taxon_name'] = 'slow_het'
-        #  sns.relplot(data=c_reassigned, x='x', y='y', hue='species', aspect=1.61).set(title="new C's")
-        #  plt.xlim(0,width)
-        # plt.ylim(0,height)
-        #  plt.show()
-
-        shuffled_df2 = pd.concat([a_reassigned, b_reassigned, c_reassigned, nonshuffled])
-        return shuffled_df2
+        return pd.concat(reassignments)

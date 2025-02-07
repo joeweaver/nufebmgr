@@ -18,7 +18,7 @@ def configure_project():
         prj.layout_poisson(radius=8)
 
 
-        prj.distribute_even_strips("horizontal", noise=20)
+        prj.distribute_even_strips("horizontal", noise=75)
 
         prj.set_track_abs()
         prj.enable_thermo_output(timestep=1)

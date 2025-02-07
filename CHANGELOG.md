@@ -8,6 +8,9 @@
   * corresponding example added
 
 * can layout taxa in even strips horizontally or vertically with ``distribute_even_strips``
+  * strips can be made noisy on a basis of 0-100 percent shuffling
+  * examples added
+
 
 ## Enhancements
 
