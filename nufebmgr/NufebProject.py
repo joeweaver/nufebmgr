@@ -4,16 +4,14 @@ from jinja2 import Template
 import cv2
 import csv
 import json
+from typing import Literal
 from .SimulationBox import SimulationBox
 from .InputScriptBuilder import InputScriptBuilder
 from datetime import datetime
-from dataclasses import dataclass
+from .poisson import PoissonDisc
+from .TaxaAssigmentManager import TaxaAssignmentManager
+from .BugPos import BugPos
 
-@dataclass
-class BugPos:
-    x: int
-    y: int
-    taxon_name: str
 
 
 class NufebProject:
@@ -164,6 +162,7 @@ class NufebProject:
         self.taxa_pre_assigned = False
         self.biostep = 900
         self.runtime = int(24*60*60/self.biostep) # default 24 hours assuming 900 s biological timestep
+        self.spatial_distribution_params = {}
 
 
     # __enter__ and __exit__ for handling using project as context
@@ -186,10 +185,22 @@ class NufebProject:
 
     def distribute_spatially_even(self):
         self.spatial_distribution = "even"
-        self.spatial_distribution_params = {}
+
+    def distribute_even_strips(self, direction: Literal["horizontal", "vertical"]):
+        allowed_dirs = {"horizontal", "vertical"}
+        if direction not in allowed_dirs:
+            raise ValueError(f"Invalid strip direction: {direction}. Must be one of {allowed_dirs}.")
+        self.spatial_distribution = "strips"
+        self.spatial_distribution_params["direction"] = direction
+        self.spatial_distribution_params["strip_proportion"] = "even"
+
+
+    def layout_poisson(self, radius):
+        poisson_disc = PoissonDisc(self.sim_box.xlen*1e-6, self.sim_box.ylen*1e-6, radius*1e-6)
+        s = poisson_disc.sample()
+        self.bug_locs = [BugPos(x,y,taxon_name="Unassigned") for x,y in s]
 
     def layout_uniform(self, nbugs):
-        self.layout = "uniform"
         base = np.random.rand(nbugs, 2)
         bugs_xy = base * np.array([self.sim_box.xlen, self.sim_box.ylen]).tolist() * 1e-6
         bugs_xy = np.round(bugs_xy, decimals=8)
@@ -235,8 +246,20 @@ class NufebProject:
             assignments = np.random.choice(a1, size=s1, p= p1, replace=True)
             for bug, taxon in zip(self.bug_locs, assignments):
                 bug.taxon_name = taxon
+        elif self.spatial_distribution == "strips":
+            tam = TaxaAssignmentManager(self.bug_locs)
+            if self.spatial_distribution_params["direction"] == "horizontal":
+                cutdir = "y"
+            elif self.spatial_distribution_params["direction"] == "vertical":
+                cutdir = "x"
+            else:
+                raise ValueError(f'Invalid spatial distribution direction parameter for strip layout')
+            if self.spatial_distribution_params["strip_proportion"] == "even":
+                self.bug_locs = tam.even_strips(list(self.active_taxa.keys()),cutdir)
+            else:
+                raise ValueError(f'Invalid spatial distribution "strip_proportion" parameter for strip layout')
         else:
-            pass # TODO raise error if we don't recognize the spatial distribution
+            raise ValueError(f"Invalid spatial distribution: {self.spatial_distribution}. Must be `strips` or `even`.")
 
     def generate_case(self):
         # because bits of these depend on each other, we enforce order of calling

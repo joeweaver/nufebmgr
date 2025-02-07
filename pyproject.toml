@@ -7,7 +7,7 @@ packages = ["nufebmgr"]
 
 [project]
 name = "nufebmgr"
-version = "0.0.1"
+version = "0.0.2"
 description = "Python-based setup of NUFEB runs"
 authors = [
     { name = "Joseph Earl Weaver", email = "joe.e.weaver@gmail.com" }

@@ -1,4 +1,5 @@
-# About nufebmgr
+# About nufebmgr 0.0.2
+
 Python package for programmatically defining NUFEB cases in the language of biologists
 
 NUFEB (Newcastle University Frontier in Engineering Biology) is an open source tool for 3D agent-based simulation of microbial systems. The tool is built on top of the molecular dynamic simulator LAMMPS, and extended with features for microbial modelling. As part of this legacy, the inputs to NUFEB are rooted in terms more familiar to molecular dynamics simulations.
