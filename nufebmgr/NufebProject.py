@@ -186,13 +186,14 @@ class NufebProject:
     def distribute_spatially_even(self):
         self.spatial_distribution = "even"
 
-    def distribute_even_strips(self, direction: Literal["horizontal", "vertical"]):
+    def distribute_even_strips(self, direction: Literal["horizontal", "vertical"], noise=0):
         allowed_dirs = {"horizontal", "vertical"}
         if direction not in allowed_dirs:
             raise ValueError(f"Invalid strip direction: {direction}. Must be one of {allowed_dirs}.")
         self.spatial_distribution = "strips"
         self.spatial_distribution_params["direction"] = direction
         self.spatial_distribution_params["strip_proportion"] = "even"
+        self.spatial_distribution_params["noise"] = noise
 
 
     def layout_poisson(self, radius):
@@ -255,7 +256,8 @@ class NufebProject:
             else:
                 raise ValueError(f'Invalid spatial distribution direction parameter for strip layout')
             if self.spatial_distribution_params["strip_proportion"] == "even":
-                self.bug_locs = tam.even_strips(list(self.active_taxa.keys()),cutdir)
+                self.bug_locs = tam.even_strips(list(self.active_taxa.keys()), cutdir,
+                                                self.spatial_distribution_params['noise'])
             else:
                 raise ValueError(f'Invalid spatial distribution "strip_proportion" parameter for strip layout')
         else:
