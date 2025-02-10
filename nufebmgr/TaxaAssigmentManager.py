@@ -16,6 +16,40 @@ class TaxaAssignmentManager:
         pass
 
     # assign as evenly spaced vertical or horizontal strips
+    def proportional_strips(self, taxa_names, proportions, cut_len, cut_dir: Literal['x', 'y'], noise=0):
+        allowed_dirs = {"x", "y"}
+        if cut_dir not in allowed_dirs:
+            raise ValueError(f"Invalid cut_dir: {cut_dir}. Must be one of {allowed_dirs}.")
+
+        df_locs = pd.DataFrame([asdict(bug_loc) for bug_loc in self.bug_locs])
+
+        # Extract labels and proportions (order is preserved in Python 3.7+)
+        labels = list(proportions.keys())
+        bin_proportions = list(map(float,proportions.values()))
+        bin_proportions = bin_proportions/np.sum(bin_proportions)
+
+        quantiles = [0.0]
+        csum = 0
+        for proportion in bin_proportions:
+            csum = csum + proportion
+            quantiles.append(csum*cut_len)
+
+        # Convert proportions to cumulative quantiles
+        #quantiles =  [0,0.2*120e-6,0.5*120e-6,120e-6]#bin_proportions / np.cumsum(bin_proportions)
+        #quantiles = bin_proportions / np.cumsum(bin_proportions)
+        # Use qcut to bin the data
+        #df_locs['taxon_name'] = pd.qcut(df_locs[cut_dir], q=quantiles, labels=labels)
+
+        df_locs['taxon_name'] = pd.cut(df_locs[cut_dir], bins=quantiles, labels=taxa_names)
+
+        if noise != 0:
+            df_locs = self._shuffle_assignments(df_locs, taxa_names, noise)
+        strips =[]
+        for row in df_locs.iterrows():
+            strips.append(BugPos(x=row[1]["x"],y=row[1]["y"],taxon_name=row[1]["taxon_name"]))
+
+        return strips
+
     def even_strips(self, taxa_names, cut_dir: Literal['x', 'y'], noise=0):
         allowed_dirs = {"x", "y"}
         if cut_dir not in allowed_dirs:

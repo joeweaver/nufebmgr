@@ -11,6 +11,8 @@
   * strips can be made noisy on a basis of 0-100 percent shuffling
   * examples added
 
+* strips can also be laid out proportionately using ``distribute_proportional_strips``
+
 
 ## Enhancements
 

@@ -173,6 +173,8 @@ For a low amount of noise in horizontal strips:
     distribute_even_strips("horizontal", noise=20)
 ```
 
+You can also make strips proportional to uneven abundances using ``distribute_proportional_strips``
+
 # Limitations
 
 To constrain context nufebmgr was largely developed by 'dogfooding' based on the needs of the cases specific to the developer's research. As such, it is particularly good at setting up Type VI Secretion System simulations.  nufebmgr is currently suitable for generating simulations involving cocci but not the more recent bacillus morphology, and has been generally tested with classic Monod-style heterotrophic growth. Other growth strategies can be represented in the taxa json files, but these have not been as exhaustively tested.

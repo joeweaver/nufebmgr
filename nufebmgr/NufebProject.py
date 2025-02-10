@@ -195,6 +195,14 @@ class NufebProject:
         self.spatial_distribution_params["strip_proportion"] = "even"
         self.spatial_distribution_params["noise"] = noise
 
+    def distribute_proportional_strips(self, direction: Literal["horizontal", "vertical"], noise=0):
+        allowed_dirs = {"horizontal", "vertical"}
+        if direction not in allowed_dirs:
+            raise ValueError(f"Invalid strip direction: {direction}. Must be one of {allowed_dirs}.")
+        self.spatial_distribution = "strips"
+        self.spatial_distribution_params["direction"] = direction
+        self.spatial_distribution_params["strip_proportion"] = "proportional"
+        self.spatial_distribution_params["noise"] = noise
 
     def layout_poisson(self, radius):
         poisson_disc = PoissonDisc(self.sim_box.xlen*1e-6, self.sim_box.ylen*1e-6, radius*1e-6)
@@ -251,13 +259,17 @@ class NufebProject:
             tam = TaxaAssignmentManager(self.bug_locs)
             if self.spatial_distribution_params["direction"] == "horizontal":
                 cutdir = "y"
+                cutdim = self.sim_box.ylen*1e-6
             elif self.spatial_distribution_params["direction"] == "vertical":
                 cutdir = "x"
+                cutdim = self.sim_box.xlen*1e-6
             else:
                 raise ValueError(f'Invalid spatial distribution direction parameter for strip layout')
             if self.spatial_distribution_params["strip_proportion"] == "even":
                 self.bug_locs = tam.even_strips(list(self.active_taxa.keys()), cutdir,
                                                 self.spatial_distribution_params['noise'])
+            elif self.spatial_distribution_params["strip_proportion"] == "proportional":
+                self.bug_locs = tam.proportional_strips(list(self.active_taxa.keys()),self.composition, cutdim, cutdir, self.spatial_distribution_params['noise'] )
             else:
                 raise ValueError(f'Invalid spatial distribution "strip_proportion" parameter for strip layout')
         else:
