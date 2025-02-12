@@ -1,5 +1,8 @@
 from jinja2 import Template
 from datetime import datetime
+import math
+from functools import reduce
+from .SimulationBox import SimulationBox
 
 class InputScriptBuilder:
     # Default configuration data
@@ -51,11 +54,11 @@ class InputScriptBuilder:
 
         "mesh_grid_and_substrates": [
             {"title": "#----Mesh Grid and Substrates----#",
-             "content": [{"name": "define grid style, substrate names, and grid size"},
+             "content": [{"name": "# define grid style, substrate names, and grid size"},
                          {"name": "grid_style", "loc": "nufeb/chemostat", 'p1': "4", 's1': 'sub', 's2': 'o2',
                           's3': 'no2', 's4': 'no3', 'grid_cell': '10e-6',
                           'comment': ''},
-                         {"name": 'set diffusion boundary conditions and initial concentrations (liquid:kg/m3'},
+                         {"name": '# set diffusion boundary conditions and initial concentrations (liquid:kg/m3'},
                          {"name": "grid_modify", "action": "set", 'substrate': "sub", 'bound1': 'pp', 'bound2': 'pp',
                           'bound3': 'nd', 'init_conc': '1e-3',
                           'comment': '1 mg/L'},
@@ -210,28 +213,24 @@ class InputScriptBuilder:
 
 
 {%- for section in microbes_and_groups -%}
-    {{ section.title }}
-    {% for entry in section.bug_groups -%}
+{{ section.title }}
+    {% for entry in section.bug_groups %}
         {%- set values = entry.values() | list -%}
 {{ values | join(' ') }}
-    {% endfor %}
-    {% for entry in section.neighbors -%}
+{% endfor %}
+    {%- for entry in section.neighbors %}
         {%- set values = entry.values() | list -%}
 {{ values | join(' ') }}
-    {% endfor %}
-{% endfor -%}
+{% endfor %}
+{% endfor %}
 
 {% for section in mesh_grid_and_substrates -%}
 {{ section.title }}
-{% for entry in section.content -%}
-{%- set values = entry.values() | list -%}
-{%- if values | length < 2 -%}
-{{ "\n" }}# {{ values[0] }} 
-{%- else -%}
-{{ values[0] }}\t\t{{ values[1:-1] | join(' ') }}{% if values[-1] != '' %}\t\t#{{ values[-1] }}{% endif -%}
-{% endif %}
-{% endfor %}
-{% endfor %}
+    {%- for entry in section.content -%}
+        {%- set values = entry.values() | list -%}
+{{ values | join(' ') }}
+{% endfor -%}
+{% endfor -%}
 
 {%- for section in biological_processes %}
   {%- for subsection, items in section.items() %}
@@ -341,6 +340,57 @@ class InputScriptBuilder:
                 entry['comment'] = f'# {all_groups[k]["description"]}'
             self.config_vals['microbes_and_groups'][0]['bug_groups'].append(entry)
 
+    def build_substrate_grid(self, substrates,simbox):
+        contents = self.config_vals['mesh_grid_and_substrates'][0]['content']
+        new_contents = []
+        for content in contents:
+            if content['name'] != 'grid_modify':
+                if content['name'] != 'grid_style':
+                    new_contents.append(content)
+                else:
+                    grid_style_dict = {'name': 'grid_style', 'loc': 'nufeb/chemostat', 'nsubs': len(substrates)}
+                    for i,substrate in enumerate(substrates):
+                        grid_style_dict[f's{i}'] = substrate
+                    grid_style_dict['grid_cell'] = f'{self._pick_grid_size(simbox)}'
+                    new_contents.append(grid_style_dict)
+
+        for substrate in substrates:
+            #print(substrate)
+            new_contents.append(substrates[substrate].as_grid_modify_dict())
+        self.config_vals['mesh_grid_and_substrates'][0]['content'] = new_contents
+
+
+    def _pick_grid_size(self,s:SimulationBox):
+        possible_sizes = reversed(range(5,16))
+        for size in possible_sizes:
+            if s.xlen%size==s.ylen%size==s.zlen%size==0:
+                return size*1e-6
+
+        raise ValueError(f'No valid grid size between 5 and 15 microns for a simulation of dimensions {s.dim_string()}')
+
+
+    #"mesh_grid_and_substrates": [
+    #     {"title": "#----Mesh Grid and Substrates----#",
+    #      "content": [{"name": "define grid style, substrate names, and grid size"},
+    #                  {"name": "grid_style", "loc": "nufeb/chemostat", 'nsubs': "4", 's1': 'sub', 's2': 'o2',
+    #                   's3': 'no2', 's4': 'no3', 'grid_cell': '10e-6',
+    #                   'comment': ''},
+    #                  {"name": 'set diffusion boundary conditions and initial concentrations (liquid:kg/m3'},
+    #                  {"name": "grid_modify", "action": "set", 'substrate': "sub", 'bound1': 'pp', 'bound2': 'pp',
+    #                   'bound3': 'nd', 'init_conc': '1e-3',
+    #                   'comment': '1 mg/L'},
+    #                  {"name": "grid_modify", "action": "set", 'substrate': "o2", 'bound1': 'pp', 'bound2': 'pp',
+    #                   'bound3': 'nd', 'init_conc': '1e-4',
+    #                   'comment': '0.1 mg/L'},
+    #                  {"name": "grid_modify", "action": "set", 'substrate': "no2", 'bound1': 'pp', 'bound2': 'pp',
+    #                   'bound3': 'nd', 'init_conc': '1e-4',
+    #                   'comment': '0.1 mg/L'},
+    #                  {"name": "grid_modify", "action": "set", 'substrate': "no3", 'bound1': 'pp', 'bound2': 'pp',
+    #                   'bound3': 'nd', 'init_conc': '1e-4',
+    #                   'comment': '0.1 mg/L'}
+    #                  ]
+    #      }
+    # ],
 
     def clear_growth_strategy(self):
         self.config_vals['biological_processes'][0]['growth'] = []

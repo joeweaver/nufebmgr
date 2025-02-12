@@ -5,3 +5,6 @@ class SimulationBox:
         self.zlen = zlen
         self.periodic = periodic
         self.custom = custom
+
+    def dim_string(self):
+        return f'x:{self.xlen} y:{self.ylen} z:{self.zlen}'

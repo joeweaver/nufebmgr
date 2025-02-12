@@ -13,16 +13,23 @@
 
 * strips can also be laid out proportionately using ``distribute_proportional_strips``
 
+* Substrates are now inferred when growth strategy is growth_het
+* Substrates, including initial and boundary concentrations, can be set manually
+
+* Grid size for substrates is auto-calculated to the largest reasonable value (5 to 15 microns)
 
 ## Enhancements
 
 * Raise error if an invalid taxa assignment strategy is specified
+* Error raised if simulation boundaries don't lend themselve to a good grid size
 
 ## Code internals
 
 * removed unused ``NufebProject.layout`` variable
 * ``BugPos`` dataclass moved to own file
 * Began trying use of Literal, introducing exceptions
+* SimulationBox can now return a string representation of its dimensions
+* Exploring test layout
 
 # version 0.0.1 
 

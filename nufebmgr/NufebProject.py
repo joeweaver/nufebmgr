@@ -4,7 +4,8 @@ from jinja2 import Template
 import cv2
 import csv
 import json
-from typing import Literal
+from typing import Literal, Optional
+from dataclasses import dataclass
 from .SimulationBox import SimulationBox
 from .InputScriptBuilder import InputScriptBuilder
 from datetime import datetime
@@ -12,7 +13,32 @@ from .poisson import PoissonDisc
 from .TaxaAssigmentManager import TaxaAssignmentManager
 from .BugPos import BugPos
 
+@dataclass
+class Substrate:
+    name: str
+    init_concentration: float
+    bulk_concentration: float
+    x_boundaries: str
+    y_boundaries: str
+    z_boundaries: str
+    molecular_weight: Optional[float] = None
 
+    def as_grid_modify_dict(self):
+        gm_dict = {'name': 'grid_modify',
+                   'action': 'set',
+                   'substrate': self.name,
+                   'xbound': self.x_boundaries,
+                   'ybound': self.y_boundaries,
+                   'zbound': self.z_boundaries,
+                   'init_conc': self.init_concentration,
+                   'bulk-kw': 'bulk',
+                   'bulkd_conc': self.bulk_concentration}
+
+        if self.molecular_weight:
+            gm_dict['mw-kw'] = 'mw'
+            gm_dict['mw'] = self.molecular_weight
+
+        return gm_dict
 
 class NufebProject:
     taxa_templates = {"basic_heterotroph": {'growth_strategy':
@@ -163,6 +189,8 @@ class NufebProject:
         self.biostep = 900
         self.runtime = int(24*60*60/self.biostep) # default 24 hours assuming 900 s biological timestep
         self.spatial_distribution_params = {}
+        self.substrates = {}
+        self.boundary_scenario = "bioreactor"
 
 
     # __enter__ and __exit__ for handling using project as context
@@ -174,6 +202,65 @@ class NufebProject:
         if exc_type is not None:
             # If we see this, add exception to issues
             print(f"Exception occurred: {exc_type}, {exc_val}")
+
+    def set_substrate(self, name, initial, bulk):
+        if self.boundary_scenario == "bioreactor":
+            self.substrate_open_top(name, initial, bulk)
+        elif self.boundary_scenario == "microwell":
+            self.substrate_closed(name, initial, bulk)
+        elif self.boundary_scenario == "floating":
+            self.substrate_full_open(name, initial,bulk)
+        elif self.boundary_scenario == "agar":
+            self.substrate_open_bottom(name, initial, bulk)
+
+    def substrate_open_top(self,name, initial, bulk):
+        new_sub = Substrate(name=name,init_concentration=initial,bulk_concentration=bulk,
+                            x_boundaries='pp',
+                            y_boundaries='pp',
+                            z_boundaries='nd')
+        self.substrates[name]=new_sub
+
+    def substrate_closed(self,name, initial, bulk):
+        new_sub = Substrate(name=name,init_concentration=initial,bulk_concentration=bulk,
+                            x_boundaries='nn',
+                            y_boundaries='nn',
+                            z_boundaries='nn')
+        self.substrates[name]=new_sub
+
+    def substrate_full_open(self, name, initial, bulk):
+        new_sub = Substrate(name=name, init_concentration=initial, bulk_concentration=bulk,
+                            x_boundaries='dd',
+                            y_boundaries='dd',
+                            z_boundaries='dd')
+        self.substrates[name]=new_sub
+
+    def substrate_open_bottom(self, name, initial, bulk):
+        new_sub = Substrate(name=name, init_concentration=initial, bulk_concentration=bulk,
+                            x_boundaries='pp',
+                            y_boundaries='pp',
+                            z_boundaries='dn')
+        self.substrates[name] = new_sub
+
+
+    def set_boundary_scenario(self,scenario):
+        self.boundary_scenario = scenario
+
+    def _infer_substrates(self):
+        subs_names = []
+        # get a list of all substrates associated with growth strategies of taxa
+        for taxon_name in self.active_taxa:
+            # TODO for 0.1.X redo json for taxa so that we don't need to know specific growth strategy implementations to get substrate names
+            growth_strat = self.active_taxa[taxon_name]['growth_strategy']['name']
+            if growth_strat == 'growth_het':
+                subs_names.append(self.active_taxa[taxon_name]['growth_strategy']['sub-ID'])
+                subs_names.append(self.active_taxa[taxon_name]['growth_strategy']['o2-ID'])
+                subs_names.append(self.active_taxa[taxon_name]['growth_strategy']['no2-ID'])
+                subs_names.append(self.active_taxa[taxon_name]['growth_strategy']['no3-ID'])
+
+        subs_names = set(subs_names)
+        for sub_name in subs_names:
+            if sub_name not in self.substrates:
+                self.set_substrate(sub_name,1e-4,1e-4)
 
 
     def use_seed(self,seed=1701):
@@ -329,6 +416,9 @@ class NufebProject:
 
     def _generate_inputscript(self):
         isb = InputScriptBuilder()
+
+        self._infer_substrates()
+        isb.build_substrate_grid(self.substrates, self.sim_box)
         isb.build_bug_groups(self.active_taxa,self.lysis_groups)
         isb.clear_growth_strategy()
         isb.build_growth_strategy(self.active_taxa)
