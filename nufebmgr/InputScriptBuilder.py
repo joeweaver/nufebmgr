@@ -177,7 +177,7 @@ class InputScriptBuilder:
                          {'name': 'shell', 'command': 'mkdir hdf5', 'comment': '#Create directory for dump'},
                          {'name': 'dump', 'dumpname': 'du3', 'group': 'all', 'format': 'nufeb/hdf5', 'p1': '1',
                           'loc': 'hdf5/dump.h5',
-                          'dumpvars': 'id type x y z vx vy vz fx fy fz radius conc reac', 'comment': ''},
+                          'dumpvars': 'id type x y z radius', 'comment': ''},
 
                          ]
              }
@@ -193,7 +193,9 @@ class InputScriptBuilder:
                          {"name": "timestep", "val": "900",
                           'comment': '# define biological timestep (900s = 15 min)'},
                          {"name": "run", "val": "86400",
-                          'comment': '# run duration (24h)'}
+                          'comment': '# run duration (24h)'},
+                         {"name": "shell", "val": "touch done.tkn",
+                          'comment': '# indicate run completed successfully'}
                          ]
              }
         ]
@@ -360,37 +362,52 @@ class InputScriptBuilder:
         self.config_vals['mesh_grid_and_substrates'][0]['content'] = new_contents
 
 
+    def track_percent_biomass(self, s: SimulationBox):
+        track_dicts = [{'name':'# Compute the volume of all bacteria '},
+                       {'name':'compute', 'vname': 'biomass_vol', 'group': 'all', 'loc':'nufeb/volume'},
+                       {'name': '# Convert to a percent of simulation volume '},
+                       {'name': 'variable', 'vname':'sim_vol', 'op':'equal', 'calc':f'"{s.volume()}"'},
+                       {'name': 'variable', 'vname': 'biomass_pct', 'op': 'equal', 'calc': '"c_biomass_vol/v_sim_vol"'}
+                       ]
+
+        self.config_vals['computation_output'][0]['percent_biomass']=track_dicts
+        pass
+
+    def end_on_biomass(self,percent):
+        float_percent = percent/100
+        halt_dict = {'name':'fix', 'id': 'halt_vol', 'group':'all', 'cmd':'halt',
+                     'N-check': '1', 'comparison': f'v_biomass_pct > {float_percent}',
+                     'action':'error', 'error-type':'soft', 'comment':'# end at percent biomass vol'}
+        self.config_vals['run'][0]['content'].insert(1,halt_dict)
+        pass
+
+        # "run": [
+        #     {"title": "#----Run----#",
+        #      "content": [{'name': 'run with timestep for physical (pairdt) and chemical (diffdt) processes'},
+        #                  {"name": "run_style", "run_type": "nufeb", 'p1': 'diffdt', 'v1': '1e-4',
+        #                   'p2': 'difftol', 'v2': '1e-6', 'p3': 'pairdt', 'v3': '1e-2',
+        #                   'p4': 'pairtol', 'v4': '1', 'p5': 'screen', 'v5': 'no',
+        #                   'p6': 'pairmax', 'v6': '1000', 'p7': 'diffmax', 'v7': '5000',
+        #                   'comment': ''},
+        #                  {"name": "timestep", "val": "900",
+        #                   'comment': '# define biological timestep (900s = 15 min)'},
+        #                  {"name": "run", "val": "86400",
+        #                   'comment': '# run duration (24h)'}
+        #                  ]
+        #      }
+        # ]
     def _pick_grid_size(self,s:SimulationBox):
-        possible_sizes = reversed(range(5,16))
+        possible_sizes = [2.5,2.0,1.5]
         for size in possible_sizes:
             if s.xlen%size==s.ylen%size==s.zlen%size==0:
                 return size*1e-6
 
+        # we'd prefer slightly larger, but return a grid size of 1 if needed
+        size = 1.0
+        if s.xlen % size == s.ylen % size == s.zlen % size == 0:
+            return size * 1e-6
         raise ValueError(f'No valid grid size between 5 and 15 microns for a simulation of dimensions {s.dim_string()}')
 
-
-    #"mesh_grid_and_substrates": [
-    #     {"title": "#----Mesh Grid and Substrates----#",
-    #      "content": [{"name": "define grid style, substrate names, and grid size"},
-    #                  {"name": "grid_style", "loc": "nufeb/chemostat", 'nsubs': "4", 's1': 'sub', 's2': 'o2',
-    #                   's3': 'no2', 's4': 'no3', 'grid_cell': '10e-6',
-    #                   'comment': ''},
-    #                  {"name": 'set diffusion boundary conditions and initial concentrations (liquid:kg/m3'},
-    #                  {"name": "grid_modify", "action": "set", 'substrate': "sub", 'bound1': 'pp', 'bound2': 'pp',
-    #                   'bound3': 'nd', 'init_conc': '1e-3',
-    #                   'comment': '1 mg/L'},
-    #                  {"name": "grid_modify", "action": "set", 'substrate': "o2", 'bound1': 'pp', 'bound2': 'pp',
-    #                   'bound3': 'nd', 'init_conc': '1e-4',
-    #                   'comment': '0.1 mg/L'},
-    #                  {"name": "grid_modify", "action": "set", 'substrate': "no2", 'bound1': 'pp', 'bound2': 'pp',
-    #                   'bound3': 'nd', 'init_conc': '1e-4',
-    #                   'comment': '0.1 mg/L'},
-    #                  {"name": "grid_modify", "action": "set", 'substrate': "no3", 'bound1': 'pp', 'bound2': 'pp',
-    #                   'bound3': 'nd', 'init_conc': '1e-4',
-    #                   'comment': '0.1 mg/L'}
-    #                  ]
-    #      }
-    # ],
 
     def clear_growth_strategy(self):
         self.config_vals['biological_processes'][0]['growth'] = []
@@ -474,6 +491,47 @@ class InputScriptBuilder:
         self.config_vals['computation_output'][0]['thermo_output'].append(thermo_style)
         self.config_vals['computation_output'][0]['thermo_output'].append({'name':'thermo', 'step':timestep})
 
+    def enable_csv_output(self,tracking_abs,tracking_biomass_pct):
+        csv_vars = ['current_step']
+        csv_header=['step']
+        if tracking_abs:
+            csv_vars.append('biomass_pct')
+            csv_header.append('percent_vol_biomass')
+        if tracking_abs:
+            for k, v in self.group_assignments.items():
+                # abs abundance
+                csv_vars.append(f'n_{k}')
+                csv_header.append(f'{k}_abundance')
+                # rel abundance
+                csv_vars.append(f'ra_{k}')
+                csv_header.append(f'{k}_relative_abundance')
+
+        var_strings=[]
+        for csv_var in csv_vars:
+            var_strings.append(f'${{{csv_var}}}')
+        var_string = ','.join(var_strings)
+        header_string = ','.join(csv_header)
+        csv_dict = [{'name':'# Save some results as CSV '},
+                    {'name': 'variable', 'vname':'current_step', 'op':'equal', 'c':'step'},
+                       {'name':'fix', 'vname': 'volcsv', 'group': 'all', 'loc':'print',
+                        'time':'1', 'vars':f'"{var_string}"', 'screen': 'screen no',
+                        'v1':'file', 'file': 'output.csv', 't':'title', 'header':f'"{header_string}"'}
+                       ]
+
+        self.config_vals['computation_output'][0]['csv_output']=csv_dict
+
+            # fix
+            # volcsv
+            # all
+            # print
+            # 100
+            # "${step},${simvol},${fillpct},${bug1_relab},${bug2_relab}" &
+            # screen
+            # no &
+            # file
+            # "cell_rel_volumes.csv" &
+            # title
+            # "step,simulation_volume,fill_percent,bug1_relab,bug2_relab"
 
     def add_abs_vars(self):
         self.config_vals['computation_output'][0]['ab_track'] = []

@@ -16,12 +16,17 @@
 * Substrates are now inferred when growth strategy is growth_het
 * Substrates, including initial and boundary concentrations, can be set manually
 
-* Grid size for substrates is auto-calculated to the largest reasonable value (5 to 15 microns)
+* Grid size for substrates is auto-calculated  (1.5 to 2.5 microns, with a 1.0 micron fallback=)
+
+* can set stop condition based on percent of simulation volume containing biomass via ``stop_at_biomass_percent``
+
+* can ``enable_csv`` output
 
 ## Enhancements
 
 * Raise error if an invalid taxa assignment strategy is specified
 * Error raised if simulation boundaries don't lend themselve to a good grid size
+* ``done.tkn`` now created by default when a run completes successfully
 
 ## Code internals
 

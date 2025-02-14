@@ -7,3 +7,4 @@ examples/*/inputscript.nufeb
 examples/*/hdf5
 examples/*/vtk
 examples/*/log.lammps
+examples/*/done.tkn

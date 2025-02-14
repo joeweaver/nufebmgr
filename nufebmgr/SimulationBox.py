@@ -8,3 +8,6 @@ class SimulationBox:
 
     def dim_string(self):
         return f'x:{self.xlen} y:{self.ylen} z:{self.zlen}'
+
+    def volume(self):
+        return (self.xlen*1e-6)*(self.ylen*1e-6)*(self.zlen*1e-6)

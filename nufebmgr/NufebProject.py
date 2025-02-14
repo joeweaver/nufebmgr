@@ -191,6 +191,9 @@ class NufebProject:
         self.spatial_distribution_params = {}
         self.substrates = {}
         self.boundary_scenario = "bioreactor"
+        self.stop_condition = "runtime"
+        self.biomass_percent = None
+        self.write_csv = False
 
 
     # __enter__ and __exit__ for handling using project as context
@@ -241,6 +244,9 @@ class NufebProject:
                             z_boundaries='dn')
         self.substrates[name] = new_sub
 
+    def stop_at_biomass_percent(self,percent: int):
+        self.stop_condition ="percent biomass"
+        self.biomass_percent = percent
 
     def set_boundary_scenario(self,scenario):
         self.boundary_scenario = scenario
@@ -434,7 +440,18 @@ class NufebProject:
         if(self.thermo_output):
             isb.add_thermo_output(self.track_abs, self.thermo_timestep)
 
-        isb.build_run(self.runtime)
+        if(self.write_csv):
+            isb.enable_csv_output(self.track_abs, self.stop_condition=="percent biomass")
+
+        if self.stop_condition=="percent biomass":
+            isb.build_run(365*24*60*60)
+            isb.track_percent_biomass(self.sim_box)
+            isb.end_on_biomass(self.biomass_percent)
+
+        elif self.stop_condition=="runtime":
+            isb.build_run(self.runtime)
+        else:
+            raise ValueError(f'Unknown stop condition: {self.stop_condition}')
 
         self.group_assignments = isb.group_assignments
         return isb.generate()
@@ -528,6 +545,9 @@ class NufebProject:
     def enable_thermo_output(self, timestep=1):
         self.thermo_output=True
         self.themo_timestep=timestep
+
+    def enable_csv(self):
+        self.write_csv = True
 
     def add_lysis_group_by_json(self,name,definition):
         self.lysis_groups[name]=definition
