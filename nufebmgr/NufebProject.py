@@ -195,6 +195,8 @@ class NufebProject:
         self.biomass_percent = None
         self.write_csv = False
         self.max_biofilm_height = None
+        self.write_hdf5 = True
+
 
 
     # __enter__ and __exit__ for handling using project as context
@@ -206,6 +208,9 @@ class NufebProject:
         if exc_type is not None:
             # If we see this, add exception to issues
             print(f"Exception occurred: {exc_type}, {exc_val}")
+
+    def disable_hdf5_output(self):
+        self.write_hdf5 = False
 
     def set_substrate(self, name, initial, bulk):
         if self.boundary_scenario == "bioreactor":
@@ -443,6 +448,9 @@ class NufebProject:
 
         if(self.thermo_output):
             isb.add_thermo_output(self.track_abs, self.thermo_timestep)
+
+        if(self.write_hdf5):
+            isb.add_hdf5_output()
 
         if(self.write_csv):
             isb.enable_csv_output(self.track_abs, self.stop_condition=="percent biomass")

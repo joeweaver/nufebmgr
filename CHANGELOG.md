@@ -15,6 +15,9 @@
   * This can be used to emulate shearing, restrict the biofilm to a known process height, or run simulations over many generations
   * Implemented by having any atom above the heigh threshold removed on each simulation step.
 
+* Can turn off HDF5 output
+  * HDF5 dumps are explicitly turned on by default. These can now be disabled via ``disable_hdf5_output()`` 
+
 ## Enhancements
 
 Beginning of shift towards a ``polars`` basis for any dataframes. Right now only for new functionality. Focus is on testing out polars syntax

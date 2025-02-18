@@ -159,6 +159,7 @@ class InputScriptBuilder:
                           'dumpvars': 'step cpu atoms v_nhet1 v_nhetslow v_mass', 'comment': ''},
                          {'name': 'thermo', 'p1': '1', 'comment': ''},
                         ],
+             "hdf5_output":[],
              "content": [{'name': 'Variables used for later output'},
                          {"name": "variable", "varname": "mass", 'op': 'equal', 'expression': '"mass(all)"',
                           'comment': '# total biomass'},
@@ -172,13 +173,6 @@ class InputScriptBuilder:
                          {'name': 'dump', 'dumpname': 'du2', 'group': 'all', 'format': 'grid/vtk', 'p1': '10',
                           'loc': 'vtk/dump_%_*.vti',
                           'd1': 'con', 'd2': 'rea', 'd3': 'den', 'd4': 'gro', 'comment': ''},
-                         {'name': 'HDF5 output, efficient binary format for storing many atom properties'},
-                         {'name': 'requires NUFEB built with HDF5 option'},
-                         {'name': 'shell', 'command': 'mkdir hdf5', 'comment': '#Create directory for dump'},
-                         {'name': 'dump', 'dumpname': 'du3', 'group': 'all', 'format': 'nufeb/hdf5', 'p1': '1',
-                          'loc': 'hdf5/dump.h5',
-                          'dumpvars': 'id type x y z radius', 'comment': ''},
-
                          ]
              }
         ],
@@ -362,6 +356,7 @@ class InputScriptBuilder:
         self.config_vals['mesh_grid_and_substrates'][0]['content'] = new_contents
 
 
+
     def limit_biofilm_height(self, max_height):
          self.config_vals['system_settings'][0]['content'].append({
                                                                  'name': 'region',
@@ -497,6 +492,17 @@ class InputScriptBuilder:
                 self.config_vals['biological_processes'][0]['division'].append(entry)
             else:
                 raise KeyError(f"Taxon {k} has unrecognized division strategy: {active_taxa[k]['division_strategy']['name'] }")
+
+    def add_hdf5_output(self):
+        self.config_vals['computation_output'][0]['hdf5_output'] = [
+            {'name': 'HDF5 output, efficient binary format for storing many atom properties'},
+            {'name': 'requires NUFEB built with HDF5 option'},
+            {'name': 'shell', 'command': 'mkdir hdf5', 'comment': '#Create directory for dump'},
+            {'name': 'dump', 'dumpname': 'du3', 'group': 'all', 'format': 'nufeb/hdf5', 'p1': '1',
+                'loc': 'hdf5/dump.h5',
+                'dumpvars': 'id type x y z radius', 'comment': ''},
+         ]
+
 
     def add_thermo_output(self,track_abs,timestep):
         self.config_vals['computation_output'][0]['thermo_output'] = []
