@@ -464,14 +464,13 @@ class NufebProject:
             isb.build_run(365*24*60*60)
             isb.track_percent_biomass(self.sim_box)
             isb.end_on_biomass(self.biomass_percent)
-
-        if self.max_biofilm_height is not None:
-            isb.limit_biofilm_height(self.max_biofilm_height)
-
         elif self.stop_condition=="runtime":
             isb.build_run(self.runtime)
         else:
             raise ValueError(f'Unknown stop condition: {self.stop_condition}')
+
+        if self.max_biofilm_height is not None:
+            isb.limit_biofilm_height(self.max_biofilm_height)
 
         self.group_assignments = isb.group_assignments
         return isb.generate()
