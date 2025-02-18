@@ -160,19 +160,10 @@ class InputScriptBuilder:
                          {'name': 'thermo', 'p1': '1', 'comment': ''},
                         ],
              "hdf5_output":[],
+             "vtk_output":[],
              "content": [{'name': 'Variables used for later output'},
                          {"name": "variable", "varname": "mass", 'op': 'equal', 'expression': '"mass(all)"',
                           'comment': '# total biomass'},
-
-                         {'name': 'VTK output, useful for paraview visualizations'},
-                         {'name': 'requires NUFEB built with VTK option'},
-                         {'name': 'shell', 'command': 'mkdir vtk', 'comment': '#Create directory for dump'},
-                         {'name': 'dump', 'dumpname': 'du1', 'group': 'all', 'format': 'vtk', 'p1': '1',
-                          'loc': 'vtk/dump*.vtu',
-                          'd1': 'id', 'd2': 'type', 'd3': 'diameter', 'comment': ''},
-                         {'name': 'dump', 'dumpname': 'du2', 'group': 'all', 'format': 'grid/vtk', 'p1': '10',
-                          'loc': 'vtk/dump_%_*.vti',
-                          'd1': 'con', 'd2': 'rea', 'd3': 'den', 'd4': 'gro', 'comment': ''},
                          ]
              }
         ],
@@ -503,6 +494,18 @@ class InputScriptBuilder:
                 'dumpvars': 'id type x y z radius', 'comment': ''},
          ]
 
+    def add_vtk_output(self):
+        self.config_vals['computation_output'][0]['vtk_output'] = [
+            {'name': 'VTK output, useful for paraview visualizations'},
+            {'name': 'requires NUFEB built with VTK option'},
+            {'name': 'shell', 'command': 'mkdir vtk', 'comment': '#Create directory for dump'},
+            {'name': 'dump', 'dumpname': 'du1', 'group': 'all', 'format': 'vtk', 'p1': '1',
+             'loc': 'vtk/dump*.vtu',
+             'd1': 'id', 'd2': 'type', 'd3': 'diameter', 'comment': ''},
+            {'name': 'dump', 'dumpname': 'du2', 'group': 'all', 'format': 'grid/vtk', 'p1': '10',
+             'loc': 'vtk/dump_%_*.vti',
+             'd1': 'con', 'd2': 'rea', 'd3': 'den', 'd4': 'gro', 'comment': ''},
+        ]
 
     def add_thermo_output(self,track_abs,timestep):
         self.config_vals['computation_output'][0]['thermo_output'] = []
