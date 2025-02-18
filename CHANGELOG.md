@@ -1,5 +1,22 @@
 # Changelog
 
+# version 0.0.3
+
+## New functions
+
+Major focus on output handling - such as reading HDF5, estimating some useful statistics, etc.
+
+* introducing DumpTools.DumpFile
+    * can get species abundance at each timestep using ``DumpFile.population_abs`` 
+
+## Enhancements
+
+Beginning of shift towards a ``polars`` basis for any dataframes. Right now only for new functionality. Focus is on testing out polars syntax
+
+## Code internals
+
+Increased ``pytest``-based testing.
+
 # version 0.0.2
 
 ## New functions
