@@ -4,10 +4,16 @@
 
 ## New functions
 
-Major focus on output handling - such as reading HDF5, estimating some useful statistics, etc.
+### Major focus on output handling - such as reading HDF5, estimating some useful statistics, etc.
 
 * introducing DumpTools.DumpFile
-    * can get species abundance at each timestep using ``DumpFile.population_abs`` 
+    * can get species abundance at each timestep using ``DumpFile.population_abs()`` 
+
+### Other
+
+* Can enforce a biofilm height limit via ``limit_biofilm_height()``.
+  * This can be used to emulate shearing, restrict the biofilm to a known process height, or run simulations over many generations
+  * Implemented by having any atom above the heigh threshold removed on each simulation step.
 
 ## Enhancements
 

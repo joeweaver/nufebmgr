@@ -194,6 +194,7 @@ class NufebProject:
         self.stop_condition = "runtime"
         self.biomass_percent = None
         self.write_csv = False
+        self.max_biofilm_height = None
 
 
     # __enter__ and __exit__ for handling using project as context
@@ -368,6 +369,9 @@ class NufebProject:
         else:
             raise ValueError(f"Invalid spatial distribution: {self.spatial_distribution}. Must be `strips` or `even`.")
 
+    def limit_biofilm_height(self,max_height):
+        self.max_biofilm_height = max_height
+
     def generate_case(self):
         # because bits of these depend on each other, we enforce order of calling
         inputscript = self._generate_inputscript()
@@ -447,6 +451,9 @@ class NufebProject:
             isb.build_run(365*24*60*60)
             isb.track_percent_biomass(self.sim_box)
             isb.end_on_biomass(self.biomass_percent)
+
+        if self.max_biofilm_height is not None:
+            isb.limit_biofilm_height(self.max_biofilm_height)
 
         elif self.stop_condition=="runtime":
             isb.build_run(self.runtime)

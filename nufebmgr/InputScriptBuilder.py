@@ -362,6 +362,28 @@ class InputScriptBuilder:
         self.config_vals['mesh_grid_and_substrates'][0]['content'] = new_contents
 
 
+    def limit_biofilm_height(self, max_height):
+         self.config_vals['system_settings'][0]['content'].append({
+                                                                 'name': 'region',
+                                                                 'region_id': 'biofilm_height_limiter',
+                                                                 'shape': 'block',
+                                                                 'dims': f'INF INF INF INF {max_height}e-6 INF',
+                                                                 'comment': '# Limit biofilm max height'
+                                                                 })
+
+         self.config_vals['biological_processes'][0]['death'].append({
+                                                                 'name': 'fix',
+                                                                 'fix_name': 'rem_tall',
+                                                                 'fig_group': 'all',
+                                                                 'fix_loc': 'evaporate',
+                                                                 'comment': '# Limit biofilm max height',
+                                                                 'p1': '1',
+                                                                 'p2': '1000000',
+                                                                 'p3': 'biofilm_height_limiter', 'seed': '1701',
+                                                                 'comment': ''
+                                                                 })
+
+
     def track_percent_biomass(self, s: SimulationBox):
         track_dicts = [{'name':'# Compute the volume of all bacteria '},
                        {'name':'compute', 'vname': 'biomass_vol', 'group': 'all', 'loc':'nufeb/volume'},
