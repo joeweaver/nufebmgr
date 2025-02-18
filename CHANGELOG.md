@@ -18,6 +18,9 @@
 * Can turn off HDF5 and VTK outputs
   * HDF5 dumps and VTK are explicitly turned on by default. These can now be disabled via ``disable_hdf5_output()`` and ``disable_vtk_output()`` 
 
+* Force grid size on substrate reaction/diffusion grid
+  * By default, a reasonable grid size is chosen. This can now be overriden with ``force_substrate_grid_size``. Don't do this if you don't know why a larger grid would be bad. It can be useful to run short, quick, prototype simulations where the increased inaccurracy is not relevant. 
+
 ## Enhancements
 
 Beginning of shift towards a ``polars`` basis for any dataframes. Right now only for new functionality. Focus is on testing out polars syntax

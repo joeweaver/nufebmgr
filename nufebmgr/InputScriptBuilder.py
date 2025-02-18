@@ -327,7 +327,14 @@ class InputScriptBuilder:
                 entry['comment'] = f'# {all_groups[k]["description"]}'
             self.config_vals['microbes_and_groups'][0]['bug_groups'].append(entry)
 
-    def build_substrate_grid(self, substrates,simbox):
+    def build_substrate_grid(self, substrates,simbox,forced_size=None):
+        if forced_size is not None:
+            if simbox.xlen % forced_size == simbox.ylen % forced_size == simbox.zlen % forced_size == 0:
+                grid_size = f'{forced_size}e-6'
+            else:
+                raise ValueError(f'Grid size was explicity set to {forced_size}, this does not fit a simulation of dimensions {simbox.dim_string()}')
+        else:
+            grid_size = f'{self._pick_grid_size(simbox)}e-6'
         contents = self.config_vals['mesh_grid_and_substrates'][0]['content']
         new_contents = []
         for content in contents:
@@ -338,7 +345,7 @@ class InputScriptBuilder:
                     grid_style_dict = {'name': 'grid_style', 'loc': 'nufeb/chemostat', 'nsubs': len(substrates)}
                     for i,substrate in enumerate(substrates):
                         grid_style_dict[f's{i}'] = substrate
-                    grid_style_dict['grid_cell'] = f'{self._pick_grid_size(simbox)}'
+                    grid_style_dict['grid_cell'] = f'{grid_size}'
                     new_contents.append(grid_style_dict)
 
         for substrate in substrates:
@@ -408,12 +415,12 @@ class InputScriptBuilder:
         possible_sizes = [2.5,2.0,1.5]
         for size in possible_sizes:
             if s.xlen%size==s.ylen%size==s.zlen%size==0:
-                return size*1e-6
+                return size
 
         # we'd prefer slightly larger, but return a grid size of 1 if needed
         size = 1.0
         if s.xlen % size == s.ylen % size == s.zlen % size == 0:
-            return size * 1e-6
+            return size
         raise ValueError(f'No valid grid size between 5 and 15 microns for a simulation of dimensions {s.dim_string()}')
 
 
