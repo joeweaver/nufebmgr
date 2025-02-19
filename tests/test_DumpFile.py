@@ -3,6 +3,8 @@ import polars as pl
 from nufebmgr.DumpTools import DumpFile
 import pyarrow.parquet as pq
 from pyarrow import fs
+import numpy as np
+import numpy.testing as npt
 import polars as pl
 
 def test_num_timesteps():
@@ -25,6 +27,16 @@ def test_population_abs():
     with DumpFile("data/dump_1.h5") as dump:
         result = dump.population_abs()
         assert expected.equals(result)
+
+def test_births():
+    expected_blank = np.array([], dtype=int)
+    expected_births5_dump1 = np.loadtxt("data/birth5_dump1.txt", dtype=int)
+    with DumpFile("data/dump_1.h5") as dump:
+        result = dump.births(2)
+        npt.assert_equal(expected_blank, result)
+
+        result = dump.births(5)
+        npt.assert_equal(expected_births5_dump1,result)
 
 
 

@@ -58,7 +58,11 @@ class DumpFile:
         return pl.DataFrame([self.unique_types_at_time(time) for time in self.timesteps()])
 
     def fields_at_time(self,field:str, t:int):
-        return list(self.dumpfile[f'{field}/{t}'])
+        try:
+            return list(self.dumpfile[f'{field}/{t}'])
+        except KeyError:
+            print(f"Received a key error trying to read field: {field} at time {t} from {self.dumpfile_name}")
+
     def types_at_time(self,t:int) -> list:
         return self.fields_at_time("type", t)
     def _count_uniques(self,x:list) ->dict:
@@ -68,4 +72,13 @@ class DumpFile:
 
     def unique_types_at_time(self, t:int):
         return self._count_uniques(self.types_at_time(t))
+
+    def births(self, timestep:int) -> List[int]:
+        id_now = self.fields_at_time('id', timestep)
+        try:
+            id_past = self.fields_at_time('id', timestep-1)
+            return np.setdiff1d(id_now, id_past)
+        except KeyError:
+            print(f'Trying to infer births at time {timestep}. It appears data for the immediate previous {timestep-1} does not exist.')
+
 
