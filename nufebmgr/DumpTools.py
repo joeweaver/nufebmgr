@@ -81,4 +81,13 @@ class DumpFile:
         except KeyError:
             print(f'Trying to infer births at time {timestep}. It appears data for the immediate previous {timestep-1} does not exist.')
 
+    def deaths(self, timestep:int) -> List[int]:
+        id_now = self.fields_at_time('id', timestep)
+        try:
+            id_past = self.fields_at_time('id', timestep-1)
+            return np.setdiff1d(id_past, id_now)
+        except KeyError:
+            print(f'Trying to infer births at time {timestep}. It appears data for the immediate previous {timestep-1} does not exist.')
+
+
 
