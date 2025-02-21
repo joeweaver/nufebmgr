@@ -1,4 +1,5 @@
 import h5py
+import polars
 import polars as pl
 import numpy as np
 from typing import List
@@ -37,6 +38,17 @@ class DumpFile:
         :return: Instance of itself with an open dump file
         """
         self.dumpfile = h5py.File(self.dumpfile_name, 'r')
+
+        self.df = pl.DataFrame()
+        timesteps = np.array(self.dumpfile['/id'])
+        for timestep in timesteps:
+            ids = np.array(self.dumpfile[f'/id/{timestep}'])
+            types = np.array(self.dumpfile[f'/type/{timestep}'])
+            times = np.full(ids.shape, int(timestep), dtype=int)
+            tdf = polars.DataFrame(np.stack([times,ids,types],axis=1),
+                                      schema=['timestep','id','type'])
+            self.df = self.df.vstack(tdf)
+
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -73,7 +85,10 @@ class DumpFile:
     def unique_types_at_time(self, t:int):
         return self._count_uniques(self.types_at_time(t))
 
-    def births(self, timestep:int) -> List[int]:
+    # TODO could DRY between births() and deaths()
+    # TODO also, look into just ingesting the h5 into polars on construction and doing all this with dataframe operations
+    #      main argument against that is that the straightforward way would be memory inefficient
+    def births_at_time(self, timestep:int) -> List[int]:
         id_now = self.fields_at_time('id', timestep)
         try:
             id_past = self.fields_at_time('id', timestep-1)
@@ -81,7 +96,8 @@ class DumpFile:
         except KeyError:
             print(f'Trying to infer births at time {timestep}. It appears data for the immediate previous {timestep-1} does not exist.')
 
-    def deaths(self, timestep:int) -> List[int]:
+
+    def deaths_at_time(self, timestep:int) -> List[int]:
         id_now = self.fields_at_time('id', timestep)
         try:
             id_past = self.fields_at_time('id', timestep-1)
@@ -89,5 +105,60 @@ class DumpFile:
         except KeyError:
             print(f'Trying to infer births at time {timestep}. It appears data for the immediate previous {timestep-1} does not exist.')
 
+    def births(self, groups:dict=None) -> dict:
+        # TODO raise error if dump doesn't consist of consecutive timessteps a la
+        # (df['time'].unique().sort().diff().drop_null() == 1).all()
+        new_ids_per_timestep = self.df.join(self.df,
+                                             left_on=[pl.col("timestep") - 1, "id"],
+                                             right_on=["timestep", "id"],
+                                             how="anti").filter(pl.col("timestep") > self.df['timestep'].min())
+        births = {}
+        if groups is None:
+            births['all'] = new_ids_per_timestep
+            return births
 
+        for group_name,group_types in groups.items():
+           births[group_name] = new_ids_per_timestep.filter(pl.col("type").is_in(group_types))
+        return births
 
+    def deaths(self, groups:dict=None) -> dict:
+        # TODO raise error if dump doesn't consist of consecutive timessteps a la
+        # (df['time'].unique().sort().diff().drop_null() == 1).all()
+
+        deaths_per_timestep = (self.df.join(self.df,
+                                            left_on=[pl.col("timestep") + 1, "id"],
+                                            right_on=["timestep", "id"],  # N
+                                            how="anti")
+                                            .with_columns((pl.col("timestep") + 1).alias("timestep"))
+                                            .filter(pl.col("timestep") < self.df['timestep'].max() + 1))
+
+        deaths = {}
+        if groups is None:
+            deaths['all'] = deaths_per_timestep
+            return deaths
+
+        for group_name,group_types in groups.items():
+           deaths[group_name] = deaths_per_timestep.filter(pl.col("type").is_in(group_types))
+        return deaths
+
+# notes to self
+#     df = pl.DataFrame({
+#         "time": [1, 1, 1, 2, 2, 2, 3, 3],
+#         "id": [101, 102, 103, 102, 104, 105, 104, 106],
+#         "type": [1, 2, 3, 2, 3, 1, 3, 2]
+#     })
+#     new_ids_per_timestep = (
+#         df.join(df,
+#                 left_on=[pl.col("time") - 1, "id"],
+#                 right_on=["time", "id"],
+#                 how="anti")
+#     )
+#     new_ids_per_timestep.filter(pl.col("time") > 1).filter(pl.col("type").is_in([2, 3]))
+#     deaths_per_timestep = (
+#         df.join(df,
+#                 left_on=[pl.col("time") + 1, "id"],  # N-1
+#                 right_on=["time", "id"],  # N
+#                 how="anti")
+#         .with_columns((pl.col("time") + 1).alias("time"))  # Shift time to when the ID disappears
+#     ).filter(pl.col("time") < df['time'].max() + 1)
+# (df['time'].unique().sort().diff().drop_null() == 1).all()

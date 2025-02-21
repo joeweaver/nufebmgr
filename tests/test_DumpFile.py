@@ -29,29 +29,72 @@ def test_population_abs():
         assert expected.equals(result)
 
 def test_births():
+    expected = pl.read_csv("data/expected_births_dump_1.csv")
+    expected_just_taxa1 = expected.filter(pl.col("type").is_in([1]))
+    expected_just_taxa23 = expected.filter(pl.col("type").is_in([2,3]))
+    with DumpFile("data/dump_1.h5") as dump:
+        result = dump.births()
+        assert expected.equals(result['all'])
+
+        result = dump.births(groups={'taxa1':[1]})
+        assert expected_just_taxa1.equals(result['taxa1'])
+        assert list(result.keys()) == ['taxa1']
+
+        result = dump.births(groups={'taxa23':[2,3]})
+        assert expected_just_taxa23.equals(result['taxa23'])
+        assert list(result.keys()) == ['taxa23']
+
+        result = dump.births(groups={'taxa1':[1], 'taxa23':[2,3]})
+        assert expected_just_taxa1.equals(result['taxa1'])
+        assert expected_just_taxa23.equals(result['taxa23'])
+        assert list(result.keys()) == ['taxa1','taxa23']
+
+def test_deaths():
+    expected = pl.read_csv("data/expected_deaths_t6ss_1.csv")
+    expected_just_taxa4 = expected.filter(pl.col("type").is_in([4]))
+    expected_just_taxa5 = expected.filter(pl.col("type").is_in([5]))
+    #TODO set upa  system which has deaths for more than 1 type and use that for test data
+    with DumpFile("data/t6ss_1.h5") as dump:
+        result = dump.deaths()
+        assert expected.equals(result['all'])
+
+        result = dump.deaths(groups={'taxa4':[4]})
+        assert expected_just_taxa4.equals(result['taxa4'])
+        assert list(result.keys()) == ['taxa4']
+
+        result = dump.deaths(groups={'taxa5':[5]})
+        assert expected_just_taxa5.equals(result['taxa5'])
+        assert list(result.keys()) == ['taxa5']
+
+        result = dump.deaths(groups={'taxa4':[4], 'taxa5':[5]})
+        assert expected_just_taxa4.equals(result['taxa4'])
+        assert expected_just_taxa5.equals(result['taxa5'])
+        assert list(result.keys()) == ['taxa4','taxa5']
+
+def test_births_at_time():
     expected_blank = np.array([], dtype=int)
     expected_births5_dump1 = np.loadtxt("data/birth5_dump1.txt", dtype=int)
     with DumpFile("data/dump_1.h5") as dump:
-        result = dump.births(2)
+        result = dump.births_at_time(2)
         npt.assert_equal(expected_blank, result)
 
-        result = dump.births(5)
+        result = dump.births_at_time(5)
         npt.assert_equal(expected_births5_dump1,result)
 
-def test_deaths():
+def test_deaths_at_time():
     expected_blank = np.array([], dtype=int)
     expected_births5_dump1 = np.loadtxt("data/birth5_dump1.txt", dtype=int)
     with DumpFile("data/t6ss_1.h5") as dump:
-        result = dump.deaths(2)
+        result = dump.deaths_at_time(2)
         npt.assert_equal(expected_blank, result)
 
-        result = dump.deaths(12)
+        result = dump.deaths_at_time(12)
         npt.assert_equal(np.array([14], dtype=int),result)
 
-        result = dump.deaths(13)
+        result = dump.deaths_at_time(13)
         npt.assert_equal(expected_blank,result)
 
-        result = dump.deaths(16)
+        result = dump.deaths_at_time(16)
         npt.assert_equal(np.array([20, 125, 152], dtype=int),result)
 
 
