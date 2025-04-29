@@ -4,7 +4,7 @@ Python package for programmatically defining NUFEB cases in the language of biol
 
 NUFEB (Newcastle University Frontier in Engineering Biology) is an open source tool for 3D agent-based simulation of microbial systems. The tool is built on top of the molecular dynamic simulator LAMMPS, and extended with features for microbial modelling. As part of this legacy, the inputs to NUFEB are rooted in terms more familiar to molecular dynamics simulations.
 https://github.com/joeweaver/nufeb-designer
-nufebmgr is a python package which aims to streamline creating NUFEB inputs by 'speaking in the language of biologists'. It allows programmatic genreation of configuration files at a high level of abstraction. It is also used to enable interactive generation via the nufeb-designer GUI application.
+nufebmgr is a python package which aims to streamline creating NUFEB inputs by 'speaking in the language of biologists'. It allows programmatically generating configuration files at a high level of abstraction. It is also used to enable interactive generation via the nufeb-designer GUI application.
 
 Development was funded by the US NSF Postdoctoral Research Fellowship in Biology Award #2007151.
 
