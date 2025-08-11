@@ -168,6 +168,7 @@ class NufebProject:
         self.write_vtk = True
         self.forced_substrate_grid_size=None
         self.infer_substrates=False
+        self.elastic_bl=None
 
 
     # __enter__ and __exit__ for handling using project as context
@@ -215,8 +216,9 @@ class NufebProject:
         self.stop_condition ="percent biomass"
         self.biomass_percent = percent
 
-    def set_boundary_scenario(self,scenario):
+    def set_boundary_scenario(self,scenario,elastic_bl=None):
         self.boundary_scenario = scenario
+        self.elastic_bl = elastic_bl
 
     def _infer_substrates(self):
         if not self.infer_substrates:
@@ -400,6 +402,10 @@ class NufebProject:
             self._infer_substrates()
 
         isb.build_substrate_grid(self.substrates, self.sim_box, self.boundary_scenario, self.forced_substrate_grid_size)
+        if(self.elastic_bl is not None):
+            if self.boundary_scenario != "bioreactor":
+                raise ValueError("An elastic boundary layer was set for a non-bioreactor scenario. Only bioreactor scenarios support elastic boundary layers at this time")
+            isb.build_post_physical(self.elastic_bl)
         isb.build_diffusion(self.substrates)
         isb.build_bug_groups(self.active_taxa,self.lysis_groups)
         isb.clear_growth_strategy()

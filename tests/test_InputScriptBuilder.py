@@ -161,3 +161,25 @@ def test_build_diffusion():
                 }
 
     assert expected == diffusion_stuff
+
+def test_build_postphysical():
+    isb = InputScriptBuilder()
+    current_data = isb.config_vals['post_physical_processes'][0]
+    # should start with empty values
+    assert [] == current_data['boundary_layer']
+    isb.build_post_physical(20)
+    new_data = isb.config_vals['post_physical_processes'][0]
+
+    expected = {'title': '#----Post-Physical Processes----#',
+                'boundary_layer': [
+                    {'title': 'Elastic boundary layer above biofilm surface'},
+                    {'name': 'fix',
+                     'fix_name': 'blayer',
+                     'group': 'all',
+                     'fix_loc': 'nufeb/boundary_layer',
+                     'distance_m': "20e-6",
+                     'comment': ''}
+                ]
+                }
+
+    assert expected == new_data

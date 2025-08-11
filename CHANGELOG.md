@@ -4,29 +4,35 @@
 
 ## Breaking changes
 
-* substrates now require diffusion coeffients and biofilm diffusion coefficient ratios
+* substrates now require diffusion coefficients and biofilm diffusion coefficient ratios
   * as a benefit, the reaction-diffusion setup of the inputscript is improved
   * a future plan is to support a built-in and user database of common substrate types
 * Automatic diffusion grid size now limited to 1, 1.5, or 2.0 microns
-* inferring substrates based on metabolisms must now be explicitly enabled (enable_inferring_substrates)
-  * inferences are not gauranteed to make sensible guesses on initial/boundary concentrations or on diffusion parameters, it is on the user to check those
+* inferring substrates based on metabolisms must now be explicitly enabled (``enable_inferring_substrates``)
+  * inferences are not guaranteed to make sensible guesses on initial/boundary concentrations or on diffusion parameters, it is on the user to check those
+
+## New functions
+* Elastic boundary layers *x* microns above the surface of the biofilm are now possible for ``bioreactor`` boundary conditions
+  * Set this via the ``elastic_bl`` parameter of ``set_boundary_scenario``. If unset, no elastic boundary layer will be used
+  * Setting an elastic boundary layer with a non-``bioreactor`` scenarior will throw a ``ValueError``
 
 ## Other
 
-* no longer need to FIRST specify boundary scenario (set_boundary_scenario) before setting up substrates
+* no longer need to FIRST specify boundary scenario (``set_boundary_scenario``) before setting up substrates
   * it still should be specified, but now the order of specification is unimportant
 * Default physical parameters tweaked to avoid undue skidding and jittering at low growth rates
+* Generated inputscripts now list the version of ``nufebmgr`` used
 
 ## Code internals
 
 * Continued introduction of testing
-  * InputScriptBuilder 
+  * ``InputScriptBuilder``
     * diffusion grid test updated to pass
     * testing various segments related to substrate
-
-* diffusion boundary conditions now set up during building instead of a part of Substrate class
+* diffusion boundary conditions now set up during building instead of a part of ``Substrate`` class
 * Adding type hints and docstrings as development touches code
 * Move Substrate into its own file
+* The lengthy default dictionary and the jinja2 template string it populates have been moved out of ``InputScriptBuilder`` and into their own files 
 
 # version 0.0.3
 
