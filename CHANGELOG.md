@@ -10,12 +10,21 @@
   
 * Automatic diffusion grid size now limited to 1, 1.5, or 2.0 microns
 
+## Other
+
+* no longer need to FIRST specify boundary scenario (set_boundary_scenario) before setting up substrates
+  * it still should be specified, but now the order of specification is unimportant
+
 ## Code internals
 
 * Continued introduction of testing
   * InputScriptBuilder 
     * diffusion grid test updated to pass
     * testing various segments related to substrate
+
+* diffusion boundary conditions now set up during building instead of a part of Substrate class
+* Adding type hints and docstrings as development touches code
+* Move Substrate into its own file
 
 # version 0.0.3
 

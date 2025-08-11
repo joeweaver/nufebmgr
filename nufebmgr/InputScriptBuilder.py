@@ -3,6 +3,8 @@ from datetime import datetime
 import math
 from functools import reduce
 from .SimulationBox import SimulationBox
+from .Substrate import Substrate
+from typing import Any
 
 class InputScriptBuilder:
     # Default configuration data
@@ -114,17 +116,17 @@ class InputScriptBuilder:
         "physical_processes": [
             {"title": "#----Physical Processes----#",
              "content": [{'name': 'Pairwise interaction between atoms'},
-                         {"name": "pair_style", "pair_loc": "gran/hooke/history", 'p1': '1e-4', 'p2': "NULL",
-                          'p3': '1e-5', 'p4': 'NULL', 'p5': '0.0', 'p6': '0',
+                         {"name": "pair_style", "pair_loc": "gran/hooke/history", 'p1': '1e-2', 'p2': "NULL",
+                          'p3': '1e-4', 'p4': 'NULL', 'p5': '0.0', 'p6': '0',
                           'comment': ""},
                          {"name": "pair_coeff", "p1": "*", 'p2': '*', 'comment': ""},
                          {'name': 'Pairwise interaction between z-wall and atoms'},
                          {"name": "fix", "fix_name": "wall", 'group': 'all', 'fix_loc': "wall/gran",
                           'loc2': 'hooke/history',
-                          'p1': "1e-3", 'p2': 'NULL', 'p3': '1e-4', 'p5': 'NULL 0 0', 'plane': 'zplane',
-                          'p6': '0.0', 'p7': '1e-04', 'comment': ''},
+                          'p1': "0.5", 'p2': 'NULL', 'p3': '0.5', 'p5': 'NULL 0 0', 'plane': 'zplane',
+                          'p6': '0.0', 'p7': '3e-04', 'comment': ''},
                          {"name": "fix", "fix_name": "vis", 'group': 'all', 'fix_loc': "viscous",
-                          'p1': "1e-5", 'comment': 'Viscous damping force'},
+                          'p1': "1e-6", 'comment': 'Viscous damping force'},
                          {"name": "fix", "fix_name": "nve", 'fix_group': 'all', "fix_loc": "nve/limit", 'p1': '1e-7',
                           'comment': 'NVE integration w/max dist. limit'}
                          ]
@@ -348,8 +350,8 @@ class InputScriptBuilder:
                     grid_style_dict['grid_cell'] = f'{grid_size}'
                     new_contents.append(grid_style_dict)
 
-        for substrate in substrates:
-            new_contents.append(self._build_grid_modify_dict(substrate[substrate], boundary_scenario))
+        for substrate in substrates.values():
+            new_contents.append(self._build_grid_modify_dict(substrate, boundary_scenario))
         self.config_vals['mesh_grid_and_substrates'][0]['content'] = new_contents
 
 
@@ -425,14 +427,38 @@ class InputScriptBuilder:
     def clear_growth_strategy(self):
         self.config_vals['biological_processes'][0]['growth'] = []
 
-    def _build_grid_modify_dict(self, s, boundary_scenario):
+    def _build_grid_modify_dict(self, s: Substrate, boundary_scenario: str) -> dict[str, Any]:
+        """Build the 'grid_modify' dictionary for a given substrate and boundary scenario.
+
+            This is an internal helper method and not part of the public API.
+
+            Boundary scenarios:
+                - 'bioreactor': open top, periodic sides, no-flux bottom
+                - 'microwell': fully closed
+                - 'floating': fully open
+                - 'agar': open bottom, periodic sides, no-flux top
+
+            Args:
+                s: Substrate dataclass
+                boundary_scenario: One of {'bioreactor', 'microwell', 'floating', 'agar'}.
+
+            Returns:
+                A dictionary of grid modification parameters, including boundaries,
+                substrate name, concentrations, and molecular weight if provided.
+
+            Raises:
+                ValueError: If `boundary_scenario` is not one of the allowed values.
+            """
         #define boundary conditions for different scenarios
         #bioreactor has open top, microwell is fully closed, floating is fully open, agar has open bottom
-        #const at class level?
         bs={'bioreactor': {'x_boundaries': 'pp', 'y_boundaries': 'pp', 'z_boundaries': 'nd'},
             'microwell': {'x_boundaries': 'nn', 'y_boundaries': 'nn', 'z_boundaries': 'nn'},
             'floating': {'x_boundaries': 'dd', 'y_boundaries': 'dd', 'z_boundaries': 'dd'},
             'agar': {'x_boundaries': 'pp', 'y_boundaries': 'pp', 'z_boundaries': 'dn'}}
+
+        if boundary_scenario not in bs:
+            raise ValueError(f"Invalid boundary_scenario: {boundary_scenario!r}. "
+                             f"Must be one of {set(bs)}.")
 
         gm_dict = {'name': 'grid_modify',
                    'action': 'set',

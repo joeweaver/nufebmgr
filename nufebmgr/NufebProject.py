@@ -4,22 +4,14 @@ from jinja2 import Template
 import cv2
 import csv
 import json
-from typing import Literal, Optional
-from dataclasses import dataclass
+from typing import Literal
 from .SimulationBox import SimulationBox
+from .Substrate import Substrate
 from .InputScriptBuilder import InputScriptBuilder
 from datetime import datetime
 from .poisson import PoissonDisc
 from .TaxaAssigmentManager import TaxaAssignmentManager
-from .BugPos import BugPos
-
-@dataclass
-class Substrate:
-    name: str
-    init_concentration: float
-    bulk_concentration: float
-    molecular_weight: Optional[float] = None
-
+from .BugPos import BugPos#
 
 class NufebProject:
     taxa_templates = {"basic_heterotroph": {'growth_strategy':
@@ -382,7 +374,7 @@ class NufebProject:
         isb = InputScriptBuilder()
 
         self._infer_substrates()
-        isb.build_substrate_grid(self.substrates, self.boundary_scenario, self.sim_box, self.forced_substrate_grid_size)
+        isb.build_substrate_grid(self.substrates, self.sim_box, self.boundary_scenario, self.forced_substrate_grid_size)
         isb.build_bug_groups(self.active_taxa,self.lysis_groups)
         isb.clear_growth_strategy()
         isb.build_growth_strategy(self.active_taxa)
