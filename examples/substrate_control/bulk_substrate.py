@@ -23,8 +23,8 @@ def configure_project():
         prj.distribute_spatially_even()
 
         prj.set_boundary_scenario("bioreactor")
-        prj.set_substrate("sub","2e-3","1.5e-3")
-        prj.set_substrate("cu", "1.1e-3", "1.2e-3")
+        prj.set_substrate("sub",2e-3,1.5e-3,1.5e-9,0.2)
+        prj.set_substrate("cu", 1.1e-3, 1.2e-3,1.6e-9,0.3)
 
         prj.set_track_abs()
         prj.enable_thermo_output(timestep=1)

@@ -14,6 +14,7 @@
 
 * no longer need to FIRST specify boundary scenario (set_boundary_scenario) before setting up substrates
   * it still should be specified, but now the order of specification is unimportant
+* Default physical parameters tweaked to avoid undue skidding and jittering at low growth rates
 
 ## Code internals
 

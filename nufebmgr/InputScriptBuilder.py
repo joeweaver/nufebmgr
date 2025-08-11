@@ -5,6 +5,7 @@ from functools import reduce
 from .SimulationBox import SimulationBox
 from .Substrate import Substrate
 from typing import Any
+from typing import Dict
 
 class InputScriptBuilder:
     # Default configuration data
@@ -134,18 +135,14 @@ class InputScriptBuilder:
         ],
         "post_physical_processes": [
             {"title": "#----Post-Physical Processes----#",
-             "content": [{'name': 'define diffusion coeff in biofilm'},
-                         {"name": "fix", "fix_name": "coeff_sub", 'group': 'all', 'fix_loc': "nufeb/diffusion_coeff",
-                          'sub1': 'sub', 'p1': 'ratio', 'coeff1': '0.8', 'comment': 'within biofilm, 80% of bulk coeff'}
+             "content": [{'name': 'adjustable boundary layer can go here'}
                          ]
              }
         ],
         "chemical_processes": [
             {"title": "#----Chemical Processes----#",
-             "content": [{'name': 'diffusion reaction for updating substrate concentration distributions'},
-                         {"name": "fix", "fix_name": "diff_sub", 'group': 'all', 'fix_loc': "nufeb/diffusion_reaction",
-                          'sub1': 'sub', 'coeff1': '1.6e-9', 'comment': ''}
-                         ]
+             "diffusion_coefficients": [],
+             "diffusion_biofilm_ratios": []
              }
         ],
         "computation_output": [
@@ -265,17 +262,25 @@ class InputScriptBuilder:
 {% endfor %}
 {% endfor %}
 
-{% for section in chemical_processes -%}
+{%- for section in chemical_processes %}
 {{ section.title }}
-{% for entry in section.content -%}
-{%- set values = entry.values() | list -%}
-{%- if values | length < 2 -%}
-{{ "\n" }}# {{ values[0] }} 
-{%- else -%}
-{{ values[0] }}\t\t{{ values[1:-1] | join(' ') }}{% if values[-1] != '' %}\t\t#{{ values[-1] }}{% endif -%}
-{% endif %}
-{% endfor %}
-{% endfor %}
+    {%- for item in section.diffusion_coefficients %}
+        {%- if 'title' in item %}
+#{{ item.title }}
+         {%- else %}
+{{ item.name }} {{item.fix_name}} {{item.group}} {{item.fix_loc}} {{item.sub1}} {{item.coeff1}} {% if item.comment %} # {{ item.comment }}{% endif %}
+        {%- endif %}
+    {%- endfor %}
+
+    {%- for item in section.diffusion_biofilm_ratios %}
+        {%- if 'title' in item %}
+    
+#{{ item.title }}
+         {%- else %}
+{{ item.name }} {{item.fix_name}} {{item.group}} {{item.fix_loc}} {{item.sub1}} ratio {{item.coeff1}} {% if item.comment %} # {{ item.comment }}{% endif %}
+        {%- endif %}
+    {%- endfor %}
+{%- endfor %} {{ "\n" }}
 
 {%- for section in computation_output %}
   {%- for subsection, items in section.items() %}
@@ -670,6 +675,49 @@ class InputScriptBuilder:
                 run_hours = runtime/60/60/bio_timestep
                 new_item = {"name": "run", "val": f'{runtime}', 'comment': f'# run duration ({run_hours} H)'}
                 content[i]=new_item
+
+    def build_diffusion(self, substrates: Dict[str,Substrate]) -> None:
+        """Build the dictionary used by the jinja template to add substrate diffusion to the inputscript
+
+                    Calling the function clears anything already in the relevant datastructure.
+                    i.e., it clobbers
+                        self.config_vals['chemical_processes'][0]['diffusion_coefficients']
+                        self.config_vals['chemical_processes'][0]['diffusion_biofilm_ratios']
+
+                    Args:
+                        substrates: Dictionary of substrates, where keys are substrate names and values are instances of Substrate
+
+                    Returns:
+                        None
+
+                    Side Effects:
+                        Updates:
+                            self.config_vals['chemical_processes'][0]['diffusion_coefficients']
+                            self.config_vals['chemical_processes'][0]['diffusion_biofilm_ratios']
+                    """
+        self.config_vals['chemical_processes'][0]['diffusion_coefficients'] = []
+        self.config_vals['chemical_processes'][0]['diffusion_coefficients'].append({'title': 'Diffusion in water'})
+        for substrate in substrates.values():
+            diff_dict = {'name': 'fix',
+                         'fix_name': f'diff_{substrate.name}',
+                         'group': 'all',
+                         'fix_loc': 'nufeb/diffusion_reaction',
+                         'sub1': substrate.name,
+                         'coeff1': substrate.diffusion_coefficient,
+                         'comment': ''}
+            self.config_vals['chemical_processes'][0]['diffusion_coefficients'].append(diff_dict)
+
+        self.config_vals['chemical_processes'][0]['diffusion_biofilm_ratios'] = []
+        self.config_vals['chemical_processes'][0]['diffusion_biofilm_ratios'].append({'title': 'Ratio of diffusion in biofilm as compared to water'})
+        for substrate in substrates.values():
+            diff_dict = {'name': 'fix',
+                         'fix_name': f'coeff_{substrate.name}',
+                         'group': 'all',
+                         'fix_loc': 'nufeb/diffusion_coeff',
+                         'sub1': substrate.name,
+                         'coeff1': substrate.biofilm_diffusion_ratio,
+                         'comment': ''}
+            self.config_vals['chemical_processes'][0]['diffusion_biofilm_ratios'].append(diff_dict)
 
     def build_t6ss(self, t6ss_attackers,t6ss_vulns,seed):
         if not t6ss_attackers:

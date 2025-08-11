@@ -1,7 +1,7 @@
 import pytest
 from nufebmgr.InputScriptBuilder import InputScriptBuilder
 from nufebmgr.SimulationBox import SimulationBox
-from nufebmgr.NufebProject import Substrate
+from nufebmgr.Substrate import Substrate
 
 def test_grid_cell_size_picker():
     isb = InputScriptBuilder()
@@ -43,7 +43,8 @@ def _test_a_grid(expected):
     assert grid_size == pytest.approx(expected)
 
 def test_build_grid_modify_dict():
-    s = Substrate(name='test_sub', init_concentration='1e-3', bulk_concentration='1e-4')
+    s = Substrate(name='test_sub', init_concentration='1e-3', bulk_concentration='1e-4', diffusion_coefficient=2.0e-9,
+                  biofilm_diffusion_ratio=0.5)
     isb = InputScriptBuilder()
 
     boundary_scenario = "bioreactor"
@@ -99,6 +100,64 @@ def test_build_grid_modify_dict():
     assert expected == result
 
     boundary_scenario = "unknown"
-    with pytest.raises(KeyError) as excinfo:
+    with pytest.raises(ValueError) as excinfo:
         isb._build_grid_modify_dict(s, boundary_scenario)
-    assert f'{boundary_scenario }' in str(excinfo.value)
+    assert f'Invalid boundary_scenario:' in str(excinfo.value)
+
+def test_build_diffusion():
+    sa = Substrate(name='test_sub_a', init_concentration='1e-3', bulk_concentration='1.5e-4',
+                  diffusion_coefficient=2.0e-9,
+                  biofilm_diffusion_ratio=0.5)
+    sb = Substrate(name='test_sub_b', init_concentration='1.1e-3', bulk_concentration='1.4e-4',
+                  diffusion_coefficient=2.1e-9,
+                  biofilm_diffusion_ratio=0.7)
+
+    isb = InputScriptBuilder()
+
+    subs_set1={'test_sub_a':sa, 'test_sub_b':sb}
+
+    diffusion_stuff = isb.config_vals['chemical_processes'][0]
+    # should start with empty values
+    assert [] == diffusion_stuff['diffusion_coefficients']
+    assert [] == diffusion_stuff['diffusion_biofilm_ratios']
+    isb.build_diffusion(subs_set1)
+    diffusion_stuff = isb.config_vals['chemical_processes'][0]
+
+    expected = {'title':'#----Chemical Processes----#',
+                'diffusion_coefficients': [
+                    {'title': 'Diffusion in water'},
+                    {'name': 'fix',
+                         'fix_name': f'diff_test_sub_a',
+                         'group': 'all',
+                         'fix_loc': 'nufeb/diffusion_reaction',
+                         'sub1': 'test_sub_a',
+                         'coeff1': 2.0e-9,
+                         'comment': ''},
+                    {'name': 'fix',
+                     'fix_name': f'diff_test_sub_b',
+                     'group': 'all',
+                     'fix_loc': 'nufeb/diffusion_reaction',
+                     'sub1': 'test_sub_b',
+                     'coeff1': 2.1e-9,
+                     'comment': ''}
+                ],
+                'diffusion_biofilm_ratios':[
+                    {'title': 'Ratio of diffusion in biofilm as compared to water'},
+                    {'name': 'fix',
+                     'fix_name': f'coeff_test_sub_a',
+                     'group': 'all',
+                     'fix_loc': 'nufeb/diffusion_coeff',
+                     'sub1': 'test_sub_a',
+                     'coeff1': 0.5,
+                     'comment': ''},
+                    {'name': 'fix',
+                     'fix_name': f'coeff_test_sub_b',
+                     'group': 'all',
+                     'fix_loc': 'nufeb/diffusion_coeff',
+                     'sub1': 'test_sub_b',
+                     'coeff1': 0.7,
+                     'comment': ''}
+                ]
+                }
+
+    assert expected == diffusion_stuff

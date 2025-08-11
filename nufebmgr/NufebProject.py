@@ -158,7 +158,7 @@ class NufebProject:
         self.biostep = 900
         self.runtime = int(24*60*60/self.biostep) # default 24 hours assuming 900 s biological timestep
         self.spatial_distribution_params = {}
-        self.substrates = {}
+        self.substrates = {}  # TODO might be better to refactor as a list, since now every Substrate has its own name
         self.boundary_scenario = "bioreactor"
         self.stop_condition = "runtime"
         self.biomass_percent = None
@@ -187,8 +187,9 @@ class NufebProject:
     def disable_vtk_output(self):
         self.write_vtk = False
 
-    def set_substrate(self, name, initial, bulk):
-        new_sub = Substrate(name=name, init_concentration=initial, bulk_concentration=bulk)
+    def set_substrate(self, name: str, initial: float, bulk: float, diffusion_coefficient: float, biofilm_diffusion_ratio:float) -> None:
+        new_sub = Substrate(name=name, init_concentration=initial, bulk_concentration=bulk,
+                            diffusion_coefficient=diffusion_coefficient, biofilm_diffusion_ratio=biofilm_diffusion_ratio)
         self.substrates[name]=new_sub
 
     def stop_at_biomass_percent(self,percent: int):
@@ -213,7 +214,7 @@ class NufebProject:
         subs_names = set(subs_names)
         for sub_name in subs_names:
             if sub_name not in self.substrates:
-                self.set_substrate(sub_name,1e-4,1e-4)
+                self.set_substrate(sub_name,1e-4,1e-4,2e-9,0.8)
 
 
     def use_seed(self,seed=1701):
@@ -375,6 +376,7 @@ class NufebProject:
 
         self._infer_substrates()
         isb.build_substrate_grid(self.substrates, self.sim_box, self.boundary_scenario, self.forced_substrate_grid_size)
+        isb.build_diffusion(self.substrates)
         isb.build_bug_groups(self.active_taxa,self.lysis_groups)
         isb.clear_growth_strategy()
         isb.build_growth_strategy(self.active_taxa)

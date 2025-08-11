@@ -23,7 +23,7 @@ def configure_project():
         prj.distribute_spatially_even()
 
         prj.set_boundary_scenario("bioreactor")
-        prj.set_substrate("sub","2e-3","1.5e-3")
+        prj.set_substrate("sub","2e-3","1.5e-3","2.0e-9","0.5")
 
 
         prj.set_track_abs()

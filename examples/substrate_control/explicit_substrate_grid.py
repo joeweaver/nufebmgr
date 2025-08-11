@@ -23,8 +23,8 @@ def configure_project():
         prj.distribute_spatially_even()
 
         prj.set_boundary_scenario("bioreactor")
-        prj.set_substrate("sub","2e-3","1.5e-3")
-        prj.set_substrate("cu", "1.1e-3", "1.2e-3")
+        prj.set_substrate("sub","2e-3","1.5e-3","2.0e-09","0.8")
+        prj.set_substrate("cu", "1.1e-3", "1.2e-3","1.0e-09","0.2")
         # This grid size is probably too large to capture substrate gradients at a good granularity.
         # it is used here as an example of forcing a size, perhaps for rapidly solving prototypes
         prj.force_substrate_grid_size(15)
