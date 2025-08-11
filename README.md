@@ -1,4 +1,4 @@
-# About nufebmgr 0.0.3
+# About nufebmgr 0.1.0
 
 Python package for programmatically defining NUFEB cases in the language of biologists
 
