@@ -105,7 +105,7 @@ class DumpFile:
         except KeyError:
             print(f'Trying to infer births at time {timestep}. It appears data for the immediate previous {timestep-1} does not exist.')
 
-    def births(self, groups:dict=None) -> dict:
+    def births(self, groups:dict=None, as_df=False) -> dict:
         # TODO raise error if dump doesn't consist of consecutive timessteps a la
         # (df['time'].unique().sort().diff().drop_null() == 1).all()
         new_ids_per_timestep = self.df.join(self.df,
@@ -114,14 +114,17 @@ class DumpFile:
                                              how="anti").filter(pl.col("timestep") > self.df['timestep'].min())
         births = {}
         if groups is None:
-            births['all'] = new_ids_per_timestep
-            return births
+            if as_df:
+                return new_ids_per_timestep
+            else:
+                births['all'] = new_ids_per_timestep
+                return births
 
         for group_name,group_types in groups.items():
            births[group_name] = new_ids_per_timestep.filter(pl.col("type").is_in(group_types))
         return births
 
-    def deaths(self, groups:dict=None) -> dict:
+    def deaths(self, groups:dict=None, as_df=False) -> dict:
         # TODO raise error if dump doesn't consist of consecutive timessteps a la
         # (df['time'].unique().sort().diff().drop_null() == 1).all()
 
@@ -134,31 +137,50 @@ class DumpFile:
 
         deaths = {}
         if groups is None:
-            deaths['all'] = deaths_per_timestep
-            return deaths
+            if as_df:
+                return deaths_per_timestep
+            else:
+                deaths['all'] = deaths_per_timestep
+                return deaths
 
         for group_name,group_types in groups.items():
            deaths[group_name] = deaths_per_timestep.filter(pl.col("type").is_in(group_types))
         return deaths
 
-# notes to self
-#     df = pl.DataFrame({
-#         "time": [1, 1, 1, 2, 2, 2, 3, 3],
-#         "id": [101, 102, 103, 102, 104, 105, 104, 106],
-#         "type": [1, 2, 3, 2, 3, 1, 3, 2]
-#     })
-#     new_ids_per_timestep = (
-#         df.join(df,
-#                 left_on=[pl.col("time") - 1, "id"],
-#                 right_on=["time", "id"],
-#                 how="anti")
-#     )
-#     new_ids_per_timestep.filter(pl.col("time") > 1).filter(pl.col("type").is_in([2, 3]))
-#     deaths_per_timestep = (
-#         df.join(df,
-#                 left_on=[pl.col("time") + 1, "id"],  # N-1
-#                 right_on=["time", "id"],  # N
-#                 how="anti")
-#         .with_columns((pl.col("time") + 1).alias("time"))  # Shift time to when the ID disappears
-#     ).filter(pl.col("time") < df['time'].max() + 1)
-# (df['time'].unique().sort().diff().drop_null() == 1).all()
+    # def curtis_numbers(self):
+    #     births_agg =pl.DataFrame()
+    #     for timestep in self.timesteps():
+    #         print(timestep)
+    #         ids=self.births_at_time(timestep)
+    #         bt=self.df.filter(pl.col('timestep')==timestep).filter(pl.col('id').is_in(ids))
+    #         births_agg = births_agg.vstack(bt.group_by(pl.col('timestep', 'type')).agg(pl.count().alias('births')))
+    #     deaths_agg =pl.DataFrame()
+    #     for timestep in self.timesteps():
+    #         print(timestep)
+    #         ids=self.deaths_at_time(timestep)
+    #         bt=self.df.filter(pl.col('timestep')==timestep-1).filter(pl.col('id').is_in(ids))
+    #         deaths_agg = deaths_agg.vstack(bt.group_by(pl.col('timestep', 'type')).agg(pl.count().alias('deaths')))
+    #
+    #     bds = births_agg.join(deaths_agg, on=["timestep", "type"], how='full', coalesce=True).fill_null(0)
+    #     taxon_mapping = pl.DataFrame({
+    #         "type": [1, 2, 3, 4, 5, 6],  # Known types
+    #         "group": ["A", "B", "C", "A", "B", "C"]
+    #     })
+    #     bds=bds.join(taxon_mapping, on="type", how="left")
+    #     aggregated = (
+    #         bds.group_by(["timestep", "group"])
+    #             .agg([
+    #                     pl.col("births").sum(),
+    #                     pl.col("deaths").sum()
+    #             ])
+    #     )
+    #     cns = aggregated.with_columns(
+    #         pl.when(pl.col("births") > 0)
+    #                     .then(pl.col("deaths") / pl.col("births"))
+    #                     .otherwise(None)
+    #                     .alias("Curtis_number"))
+    #     cns.write_csv('curtis.csv')
+    #     return
+
+
+

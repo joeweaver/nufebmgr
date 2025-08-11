@@ -97,6 +97,13 @@ def test_deaths_at_time():
         result = dump.deaths_at_time(16)
         npt.assert_equal(np.array([20, 125, 152], dtype=int),result)
 
+# def test_curtis_numbers():
+#     #TODO set upa  system which has deaths for more than 1 type and use that for test data
+#     with DumpFile("data/t6ss_1.h5") as dump:
+#         dump.curtis_numbers()
+#
+#     with DumpFile("/home/joe/professional/software/nufeb/cases/T6SS/force_biofilm/case/rand1701-160wide/hdf5/dump.h5") as dump:
+#         dump.curtis_numbers()
 
 
 
