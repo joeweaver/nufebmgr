@@ -7,6 +7,7 @@ def configure_project():
         prj.set_box(x=90,
                     y=90,
                     z=60)
+        prj.enable_inferring_substrates()
         prj.add_taxon_by_template(name="basic_het",
                                   template="basic_heterotroph")
         prj.add_taxon_by_template(name="slow_het",

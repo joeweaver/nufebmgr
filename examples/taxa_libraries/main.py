@@ -6,7 +6,7 @@ def configure_project():
         prj.set_box(x=50,
                     y=50,
                     z=50)
-
+        prj.enable_inferring_substrates()
         prj.add_taxon_by_jsonfile("example.json")
 
         prj.layout_uniform(nbugs=20)

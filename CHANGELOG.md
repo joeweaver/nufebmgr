@@ -7,8 +7,9 @@
 * substrates now require diffusion coeffients and biofilm diffusion coefficient ratios
   * as a benefit, the reaction-diffusion setup of the inputscript is improved
   * a future plan is to support a built-in and user database of common substrate types
-  
 * Automatic diffusion grid size now limited to 1, 1.5, or 2.0 microns
+* inferring substrates based on metabolisms must now be explicitly enabled (enable_inferring_substrates)
+  * inferences are not gauranteed to make sensible guesses on initial/boundary concentrations or on diffusion parameters, it is on the user to check those
 
 ## Other
 

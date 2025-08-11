@@ -167,6 +167,7 @@ class NufebProject:
         self.write_hdf5 = True
         self.write_vtk = True
         self.forced_substrate_grid_size=None
+        self.infer_substrates=False
 
 
     # __enter__ and __exit__ for handling using project as context
@@ -187,6 +188,24 @@ class NufebProject:
     def disable_vtk_output(self):
         self.write_vtk = False
 
+    def enable_inferring_substrates(self) -> None:
+        """
+        Enable substrate inference based on metabolisms.
+
+        Allows guessing substrates required and setting  correct
+        initial concentrations, boundary conditions and diffusion data
+        """
+        self.infer_substrates=True
+
+    def disable_inferring_substrates(self) -> None:
+        """
+        Disable substrate inference based on metabolisms.
+
+        Prevents guessing substrates required and setting correct
+        initial concentrations, boundary conditions and diffusion data
+        """
+        self.infer_substrates=False
+
     def set_substrate(self, name: str, initial: float, bulk: float, diffusion_coefficient: float, biofilm_diffusion_ratio:float) -> None:
         new_sub = Substrate(name=name, init_concentration=initial, bulk_concentration=bulk,
                             diffusion_coefficient=diffusion_coefficient, biofilm_diffusion_ratio=biofilm_diffusion_ratio)
@@ -200,6 +219,9 @@ class NufebProject:
         self.boundary_scenario = scenario
 
     def _infer_substrates(self):
+        if not self.infer_substrates:
+            raise RuntimeError("Inferring substrates is not enabled. To enable call enable_inferring_substrates before calling _infer_substrates")
+
         subs_names = []
         # get a list of all substrates associated with growth strategies of taxa
         for taxon_name in self.active_taxa:
@@ -374,7 +396,9 @@ class NufebProject:
     def _generate_inputscript(self):
         isb = InputScriptBuilder()
 
-        self._infer_substrates()
+        if self.infer_substrates:
+            self._infer_substrates()
+
         isb.build_substrate_grid(self.substrates, self.sim_box, self.boundary_scenario, self.forced_substrate_grid_size)
         isb.build_diffusion(self.substrates)
         isb.build_bug_groups(self.active_taxa,self.lysis_groups)

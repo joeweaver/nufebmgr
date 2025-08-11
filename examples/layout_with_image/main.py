@@ -7,6 +7,7 @@ def configure_project():
         prj.set_box(x=100,
                     y=100,
                     z=50)
+        prj.enable_inferring_substrates()
         prj.add_taxon_by_jsonfile("example.json")
 
         mappings = {"FF1B9E77": 'basic_heterotroph',
