@@ -1,5 +1,22 @@
 # Changelog
 
+# version 0.1.0
+
+## Breaking changes
+
+* substrates now require diffusion coeffients and biofilm diffusion coefficient ratios
+  * as a benefit, the reaction-diffusion setup of the inputscript is improved
+  * a future plan is to support a built-in and user database of common substrate types
+  
+* Automatic diffusion grid size now limited to 1, 1.5, or 2.0 microns
+
+## Code internals
+
+* Continued introduction of testing
+  * InputScriptBuilder 
+    * diffusion grid test updated to pass
+    * testing various segments related to substrate
+
 # version 0.0.3
 
 ## New functions

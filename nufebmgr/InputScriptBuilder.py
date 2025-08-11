@@ -412,7 +412,7 @@ class InputScriptBuilder:
         #      }
         # ]
     def _pick_grid_size(self,s:SimulationBox):
-        possible_sizes = [2.5,2.0,1.5]
+        possible_sizes = [2.0,1.5]
         for size in possible_sizes:
             if s.xlen%size==s.ylen%size==s.zlen%size==0:
                 return size
@@ -421,11 +421,28 @@ class InputScriptBuilder:
         size = 1.0
         if s.xlen % size == s.ylen % size == s.zlen % size == 0:
             return size
-        raise ValueError(f'No valid grid size between 5 and 15 microns for a simulation of dimensions {s.dim_string()}')
+        raise ValueError(f'No valid grid size (option 1, 1.5, 2 microns) for a simulation of dimensions {s.dim_string()}')
 
 
     def clear_growth_strategy(self):
         self.config_vals['biological_processes'][0]['growth'] = []
+
+    def _build_grid_modify_dict(self, s):
+        gm_dict = {'name': 'grid_modify',
+                   'action': 'set',
+                   'substrate': s.name,
+                   'xbound': s.x_boundaries,
+                   'ybound': s.y_boundaries,
+                   'zbound': s.z_boundaries,
+                   'init_conc': s.init_concentration,
+                   'bulk-kw': 'bulk',
+                   'bulkd_conc': s.bulk_concentration}
+
+        if s.molecular_weight:
+            gm_dict['mw-kw'] = 'mw'
+            gm_dict['mw'] = s.molecular_weight
+
+        return gm_dict
 
 
     def build_growth_strategy(self, active_taxa):
