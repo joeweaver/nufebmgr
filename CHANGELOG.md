@@ -1,5 +1,34 @@
 # Changelog
 
+# version 0.0.3
+
+## New functions
+
+### Major focus on output handling - such as reading HDF5, estimating some useful statistics, etc.
+
+* introducing DumpTools.DumpFile
+    * can get species abundance at each timestep using ``DumpFile.population_abs()`` 
+
+### Other
+
+* Can enforce a biofilm height limit via ``limit_biofilm_height()``.
+  * This can be used to emulate shearing, restrict the biofilm to a known process height, or run simulations over many generations
+  * Implemented by having any atom above the heigh threshold removed on each simulation step.
+
+* Can turn off HDF5 and VTK outputs
+  * HDF5 dumps and VTK are explicitly turned on by default. These can now be disabled via ``disable_hdf5_output()`` and ``disable_vtk_output()`` 
+
+* Force grid size on substrate reaction/diffusion grid
+  * By default, a reasonable grid size is chosen. This can now be overriden with ``force_substrate_grid_size``. Don't do this if you don't know why a larger grid would be bad. It can be useful to run short, quick, prototype simulations where the increased inaccurracy is not relevant. 
+
+## Enhancements
+
+Beginning of shift towards a ``polars`` basis for any dataframes. Right now only for new functionality. Focus is on testing out polars syntax
+
+## Code internals
+
+Increased ``pytest``-based testing.
+
 # version 0.0.2
 
 ## New functions

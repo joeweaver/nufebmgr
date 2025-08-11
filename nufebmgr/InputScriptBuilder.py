@@ -159,26 +159,11 @@ class InputScriptBuilder:
                           'dumpvars': 'step cpu atoms v_nhet1 v_nhetslow v_mass', 'comment': ''},
                          {'name': 'thermo', 'p1': '1', 'comment': ''},
                         ],
+             "hdf5_output":[],
+             "vtk_output":[],
              "content": [{'name': 'Variables used for later output'},
                          {"name": "variable", "varname": "mass", 'op': 'equal', 'expression': '"mass(all)"',
                           'comment': '# total biomass'},
-
-                         {'name': 'VTK output, useful for paraview visualizations'},
-                         {'name': 'requires NUFEB built with VTK option'},
-                         {'name': 'shell', 'command': 'mkdir vtk', 'comment': '#Create directory for dump'},
-                         {'name': 'dump', 'dumpname': 'du1', 'group': 'all', 'format': 'vtk', 'p1': '1',
-                          'loc': 'vtk/dump*.vtu',
-                          'd1': 'id', 'd2': 'type', 'd3': 'diameter', 'comment': ''},
-                         {'name': 'dump', 'dumpname': 'du2', 'group': 'all', 'format': 'grid/vtk', 'p1': '10',
-                          'loc': 'vtk/dump_%_*.vti',
-                          'd1': 'con', 'd2': 'rea', 'd3': 'den', 'd4': 'gro', 'comment': ''},
-                         {'name': 'HDF5 output, efficient binary format for storing many atom properties'},
-                         {'name': 'requires NUFEB built with HDF5 option'},
-                         {'name': 'shell', 'command': 'mkdir hdf5', 'comment': '#Create directory for dump'},
-                         {'name': 'dump', 'dumpname': 'du3', 'group': 'all', 'format': 'nufeb/hdf5', 'p1': '1',
-                          'loc': 'hdf5/dump.h5',
-                          'dumpvars': 'id type x y z radius', 'comment': ''},
-
                          ]
              }
         ],
@@ -342,7 +327,14 @@ class InputScriptBuilder:
                 entry['comment'] = f'# {all_groups[k]["description"]}'
             self.config_vals['microbes_and_groups'][0]['bug_groups'].append(entry)
 
-    def build_substrate_grid(self, substrates,simbox):
+    def build_substrate_grid(self, substrates,simbox,forced_size=None):
+        if forced_size is not None:
+            if simbox.xlen % forced_size == simbox.ylen % forced_size == simbox.zlen % forced_size == 0:
+                grid_size = f'{forced_size}e-6'
+            else:
+                raise ValueError(f'Grid size was explicity set to {forced_size}, this does not fit a simulation of dimensions {simbox.dim_string()}')
+        else:
+            grid_size = f'{self._pick_grid_size(simbox)}e-6'
         contents = self.config_vals['mesh_grid_and_substrates'][0]['content']
         new_contents = []
         for content in contents:
@@ -353,13 +345,36 @@ class InputScriptBuilder:
                     grid_style_dict = {'name': 'grid_style', 'loc': 'nufeb/chemostat', 'nsubs': len(substrates)}
                     for i,substrate in enumerate(substrates):
                         grid_style_dict[f's{i}'] = substrate
-                    grid_style_dict['grid_cell'] = f'{self._pick_grid_size(simbox)}'
+                    grid_style_dict['grid_cell'] = f'{grid_size}'
                     new_contents.append(grid_style_dict)
 
         for substrate in substrates:
             #print(substrate)
             new_contents.append(substrates[substrate].as_grid_modify_dict())
         self.config_vals['mesh_grid_and_substrates'][0]['content'] = new_contents
+
+
+
+    def limit_biofilm_height(self, max_height):
+         self.config_vals['system_settings'][0]['content'].append({
+                                                                 'name': 'region',
+                                                                 'region_id': 'biofilm_height_limiter',
+                                                                 'shape': 'block',
+                                                                 'dims': f'INF INF INF INF {max_height}e-6 INF',
+                                                                 'comment': '# Limit biofilm max height'
+                                                                 })
+
+         self.config_vals['biological_processes'][0]['death'].append({
+                                                                 'name': 'fix',
+                                                                 'fix_name': 'rem_tall',
+                                                                 'fig_group': 'all',
+                                                                 'fix_loc': 'evaporate',
+                                                                 'comment': '# Limit biofilm max height',
+                                                                 'p1': '1',
+                                                                 'p2': '1000000',
+                                                                 'p3': 'biofilm_height_limiter', 'seed': '1701',
+                                                                 'comment': ''
+                                                                 })
 
 
     def track_percent_biomass(self, s: SimulationBox):
@@ -400,12 +415,12 @@ class InputScriptBuilder:
         possible_sizes = [2.5,2.0,1.5]
         for size in possible_sizes:
             if s.xlen%size==s.ylen%size==s.zlen%size==0:
-                return size*1e-6
+                return size
 
         # we'd prefer slightly larger, but return a grid size of 1 if needed
         size = 1.0
         if s.xlen % size == s.ylen % size == s.zlen % size == 0:
-            return size * 1e-6
+            return size
         raise ValueError(f'No valid grid size between 5 and 15 microns for a simulation of dimensions {s.dim_string()}')
 
 
@@ -475,6 +490,29 @@ class InputScriptBuilder:
                 self.config_vals['biological_processes'][0]['division'].append(entry)
             else:
                 raise KeyError(f"Taxon {k} has unrecognized division strategy: {active_taxa[k]['division_strategy']['name'] }")
+
+    def add_hdf5_output(self):
+        self.config_vals['computation_output'][0]['hdf5_output'] = [
+            {'name': 'HDF5 output, efficient binary format for storing many atom properties'},
+            {'name': 'requires NUFEB built with HDF5 option'},
+            {'name': 'shell', 'command': 'mkdir hdf5', 'comment': '#Create directory for dump'},
+            {'name': 'dump', 'dumpname': 'du3', 'group': 'all', 'format': 'nufeb/hdf5', 'p1': '1',
+                'loc': 'hdf5/dump.h5',
+                'dumpvars': 'id type x y z radius', 'comment': ''},
+         ]
+
+    def add_vtk_output(self):
+        self.config_vals['computation_output'][0]['vtk_output'] = [
+            {'name': 'VTK output, useful for paraview visualizations'},
+            {'name': 'requires NUFEB built with VTK option'},
+            {'name': 'shell', 'command': 'mkdir vtk', 'comment': '#Create directory for dump'},
+            {'name': 'dump', 'dumpname': 'du1', 'group': 'all', 'format': 'vtk', 'p1': '1',
+             'loc': 'vtk/dump*.vtu',
+             'd1': 'id', 'd2': 'type', 'd3': 'diameter', 'comment': ''},
+            {'name': 'dump', 'dumpname': 'du2', 'group': 'all', 'format': 'grid/vtk', 'p1': '10',
+             'loc': 'vtk/dump_%_*.vti',
+             'd1': 'con', 'd2': 'rea', 'd3': 'den', 'd4': 'gro', 'comment': ''},
+        ]
 
     def add_thermo_output(self,track_abs,timestep):
         self.config_vals['computation_output'][0]['thermo_output'] = []

@@ -175,10 +175,6 @@ class NufebProject:
         self.active_taxa = {}
         self.lysis_groups = {}
         self.track_abs = False
-        self.vtk_output = False
-        self.vtk_timestep =0
-        self.hdf5_output = False
-        self.hdf5_timestep = 0
         self.thermo_output = True
         self.thermo_timestep= 1
         self.csv_output = False
@@ -194,6 +190,10 @@ class NufebProject:
         self.stop_condition = "runtime"
         self.biomass_percent = None
         self.write_csv = False
+        self.max_biofilm_height = None
+        self.write_hdf5 = True
+        self.write_vtk = True
+        self.forced_substrate_grid_size=None
 
 
     # __enter__ and __exit__ for handling using project as context
@@ -205,6 +205,14 @@ class NufebProject:
         if exc_type is not None:
             # If we see this, add exception to issues
             print(f"Exception occurred: {exc_type}, {exc_val}")
+
+    def force_substrate_grid_size(self,size):
+        self.forced_substrate_grid_size=size
+    def disable_hdf5_output(self):
+        self.write_hdf5 = False
+
+    def disable_vtk_output(self):
+        self.write_vtk = False
 
     def set_substrate(self, name, initial, bulk):
         if self.boundary_scenario == "bioreactor":
@@ -368,6 +376,9 @@ class NufebProject:
         else:
             raise ValueError(f"Invalid spatial distribution: {self.spatial_distribution}. Must be `strips` or `even`.")
 
+    def limit_biofilm_height(self,max_height):
+        self.max_biofilm_height = max_height
+
     def generate_case(self):
         # because bits of these depend on each other, we enforce order of calling
         inputscript = self._generate_inputscript()
@@ -424,7 +435,7 @@ class NufebProject:
         isb = InputScriptBuilder()
 
         self._infer_substrates()
-        isb.build_substrate_grid(self.substrates, self.sim_box)
+        isb.build_substrate_grid(self.substrates, self.sim_box, self.forced_substrate_grid_size)
         isb.build_bug_groups(self.active_taxa,self.lysis_groups)
         isb.clear_growth_strategy()
         isb.build_growth_strategy(self.active_taxa)
@@ -440,6 +451,12 @@ class NufebProject:
         if(self.thermo_output):
             isb.add_thermo_output(self.track_abs, self.thermo_timestep)
 
+        if(self.write_hdf5):
+            isb.add_hdf5_output()
+
+        if (self.write_vtk):
+            isb.add_vtk_output()
+
         if(self.write_csv):
             isb.enable_csv_output(self.track_abs, self.stop_condition=="percent biomass")
 
@@ -447,11 +464,13 @@ class NufebProject:
             isb.build_run(365*24*60*60)
             isb.track_percent_biomass(self.sim_box)
             isb.end_on_biomass(self.biomass_percent)
-
         elif self.stop_condition=="runtime":
             isb.build_run(self.runtime)
         else:
             raise ValueError(f'Unknown stop condition: {self.stop_condition}')
+
+        if self.max_biofilm_height is not None:
+            isb.limit_biofilm_height(self.max_biofilm_height)
 
         self.group_assignments = isb.group_assignments
         return isb.generate()
