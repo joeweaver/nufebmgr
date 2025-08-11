@@ -18,27 +18,8 @@ class Substrate:
     name: str
     init_concentration: float
     bulk_concentration: float
-    x_boundaries: str
-    y_boundaries: str
-    z_boundaries: str
     molecular_weight: Optional[float] = None
 
-    def as_grid_modify_dict(self):
-        gm_dict = {'name': 'grid_modify',
-                   'action': 'set',
-                   'substrate': self.name,
-                   'xbound': self.x_boundaries,
-                   'ybound': self.y_boundaries,
-                   'zbound': self.z_boundaries,
-                   'init_conc': self.init_concentration,
-                   'bulk-kw': 'bulk',
-                   'bulkd_conc': self.bulk_concentration}
-
-        if self.molecular_weight:
-            gm_dict['mw-kw'] = 'mw'
-            gm_dict['mw'] = self.molecular_weight
-
-        return gm_dict
 
 class NufebProject:
     taxa_templates = {"basic_heterotroph": {'growth_strategy':
@@ -215,42 +196,8 @@ class NufebProject:
         self.write_vtk = False
 
     def set_substrate(self, name, initial, bulk):
-        if self.boundary_scenario == "bioreactor":
-            self.substrate_open_top(name, initial, bulk)
-        elif self.boundary_scenario == "microwell":
-            self.substrate_closed(name, initial, bulk)
-        elif self.boundary_scenario == "floating":
-            self.substrate_full_open(name, initial,bulk)
-        elif self.boundary_scenario == "agar":
-            self.substrate_open_bottom(name, initial, bulk)
-
-    def substrate_open_top(self,name, initial, bulk):
-        new_sub = Substrate(name=name,init_concentration=initial,bulk_concentration=bulk,
-                            x_boundaries='pp',
-                            y_boundaries='pp',
-                            z_boundaries='nd')
+        new_sub = Substrate(name=name, init_concentration=initial, bulk_concentration=bulk)
         self.substrates[name]=new_sub
-
-    def substrate_closed(self,name, initial, bulk):
-        new_sub = Substrate(name=name,init_concentration=initial,bulk_concentration=bulk,
-                            x_boundaries='nn',
-                            y_boundaries='nn',
-                            z_boundaries='nn')
-        self.substrates[name]=new_sub
-
-    def substrate_full_open(self, name, initial, bulk):
-        new_sub = Substrate(name=name, init_concentration=initial, bulk_concentration=bulk,
-                            x_boundaries='dd',
-                            y_boundaries='dd',
-                            z_boundaries='dd')
-        self.substrates[name]=new_sub
-
-    def substrate_open_bottom(self, name, initial, bulk):
-        new_sub = Substrate(name=name, init_concentration=initial, bulk_concentration=bulk,
-                            x_boundaries='pp',
-                            y_boundaries='pp',
-                            z_boundaries='dn')
-        self.substrates[name] = new_sub
 
     def stop_at_biomass_percent(self,percent: int):
         self.stop_condition ="percent biomass"
@@ -435,7 +382,7 @@ class NufebProject:
         isb = InputScriptBuilder()
 
         self._infer_substrates()
-        isb.build_substrate_grid(self.substrates, self.sim_box, self.forced_substrate_grid_size)
+        isb.build_substrate_grid(self.substrates, self.boundary_scenario, self.sim_box, self.forced_substrate_grid_size)
         isb.build_bug_groups(self.active_taxa,self.lysis_groups)
         isb.clear_growth_strategy()
         isb.build_growth_strategy(self.active_taxa)

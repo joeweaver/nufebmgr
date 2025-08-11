@@ -43,13 +43,62 @@ def _test_a_grid(expected):
     assert grid_size == pytest.approx(expected)
 
 def test_build_grid_modify_dict():
-    s = Substrate(name='test_sub', init_concentration='1e-3', bulk_concentration='1e-4',
-              x_boundaries='pp',
-              y_boundaries='pp',
-              z_boundaries='nd')
-
+    s = Substrate(name='test_sub', init_concentration='1e-3', bulk_concentration='1e-4')
     isb = InputScriptBuilder()
-    result = isb._build_grid_modify_dict(s)
 
-    expected = s.as_grid_modify_dict()
+    boundary_scenario = "bioreactor"
+    result = isb._build_grid_modify_dict(s, boundary_scenario)
+    expected = {'name': 'grid_modify',
+                   'action': 'set',
+                   'substrate': 'test_sub',
+                   'xbound': 'pp',
+                   'ybound': 'pp',
+                   'zbound': 'nd',
+                   'init_conc': '1e-3',
+                   'bulk-kw': 'bulk',
+                   'bulkd_conc': '1e-4'}
     assert expected == result
+
+    boundary_scenario = "microwell"
+    result = isb._build_grid_modify_dict(s, boundary_scenario)
+    expected = {'name': 'grid_modify',
+                   'action': 'set',
+                   'substrate': 'test_sub',
+                   'xbound': 'nn',
+                   'ybound': 'nn',
+                   'zbound': 'nn',
+                   'init_conc': '1e-3',
+                   'bulk-kw': 'bulk',
+                   'bulkd_conc': '1e-4'}
+    assert expected == result
+
+    boundary_scenario = "floating"
+    result = isb._build_grid_modify_dict(s, boundary_scenario)
+    expected = {'name': 'grid_modify',
+                   'action': 'set',
+                   'substrate': 'test_sub',
+                   'xbound': 'dd',
+                   'ybound': 'dd',
+                   'zbound': 'dd',
+                   'init_conc': '1e-3',
+                   'bulk-kw': 'bulk',
+                   'bulkd_conc': '1e-4'}
+    assert expected == result
+
+    boundary_scenario = "agar"
+    result = isb._build_grid_modify_dict(s, boundary_scenario)
+    expected = {'name': 'grid_modify',
+                   'action': 'set',
+                   'substrate': 'test_sub',
+                   'xbound': 'pp',
+                   'ybound': 'pp',
+                   'zbound': 'dn',
+                   'init_conc': '1e-3',
+                   'bulk-kw': 'bulk',
+                   'bulkd_conc': '1e-4'}
+    assert expected == result
+
+    boundary_scenario = "unknown"
+    with pytest.raises(KeyError) as excinfo:
+        isb._build_grid_modify_dict(s, boundary_scenario)
+    assert f'{boundary_scenario }' in str(excinfo.value)

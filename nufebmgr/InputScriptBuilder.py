@@ -327,7 +327,7 @@ class InputScriptBuilder:
                 entry['comment'] = f'# {all_groups[k]["description"]}'
             self.config_vals['microbes_and_groups'][0]['bug_groups'].append(entry)
 
-    def build_substrate_grid(self, substrates,simbox,forced_size=None):
+    def build_substrate_grid(self, substrates, simbox, boundary_scenario, forced_size=None):
         if forced_size is not None:
             if simbox.xlen % forced_size == simbox.ylen % forced_size == simbox.zlen % forced_size == 0:
                 grid_size = f'{forced_size}e-6'
@@ -349,10 +349,8 @@ class InputScriptBuilder:
                     new_contents.append(grid_style_dict)
 
         for substrate in substrates:
-            #print(substrate)
-            new_contents.append(substrates[substrate].as_grid_modify_dict())
+            new_contents.append(self._build_grid_modify_dict(substrate[substrate], boundary_scenario))
         self.config_vals['mesh_grid_and_substrates'][0]['content'] = new_contents
-
 
 
     def limit_biofilm_height(self, max_height):
@@ -427,13 +425,21 @@ class InputScriptBuilder:
     def clear_growth_strategy(self):
         self.config_vals['biological_processes'][0]['growth'] = []
 
-    def _build_grid_modify_dict(self, s):
+    def _build_grid_modify_dict(self, s, boundary_scenario):
+        #define boundary conditions for different scenarios
+        #bioreactor has open top, microwell is fully closed, floating is fully open, agar has open bottom
+        #const at class level?
+        bs={'bioreactor': {'x_boundaries': 'pp', 'y_boundaries': 'pp', 'z_boundaries': 'nd'},
+            'microwell': {'x_boundaries': 'nn', 'y_boundaries': 'nn', 'z_boundaries': 'nn'},
+            'floating': {'x_boundaries': 'dd', 'y_boundaries': 'dd', 'z_boundaries': 'dd'},
+            'agar': {'x_boundaries': 'pp', 'y_boundaries': 'pp', 'z_boundaries': 'dn'}}
+
         gm_dict = {'name': 'grid_modify',
                    'action': 'set',
                    'substrate': s.name,
-                   'xbound': s.x_boundaries,
-                   'ybound': s.y_boundaries,
-                   'zbound': s.z_boundaries,
+                   'xbound': bs[boundary_scenario]['x_boundaries'],
+                   'ybound': bs[boundary_scenario]['y_boundaries'],
+                   'zbound': bs[boundary_scenario]['z_boundaries'],
                    'init_conc': s.init_concentration,
                    'bulk-kw': 'bulk',
                    'bulkd_conc': s.bulk_concentration}
