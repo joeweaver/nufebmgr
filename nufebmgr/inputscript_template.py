@@ -2,7 +2,7 @@
 #using as a python string instead of as a j2 file for ease of package managment
 
 TEMPLATE_STR = \
-"""{% for line in header -%}
+"""{%- for line in header -%}
 {{ line }}
 {% endfor %}
 
@@ -12,28 +12,24 @@ TEMPLATE_STR = \
 {%- set values = entry.values() | list -%}
 {% if values | length < 2 %}{{ "\n" }}# {{ values[0] }} {% else %}{{ values[0] }}\t\t{{ values[1:-1] | join(' ') }}{% if values[-1] != '' %}\t\t#{{ values[-1] }}{% endif -%}{% endif %}
 {% endfor %}
-{% endfor %}
+{%- endfor %}
 
-
-{%- for section in microbes_and_groups -%}
+{%- for section in microbes_and_groups %}
 {{ section.title }}
-    {% for entry in section.bug_groups %}
-        {%- set values = entry.values() | list -%}
-{{ values | join(' ') }}
-{% endfor %}
+    {%- for entry in section.bug_groups %}
+{{ entry.values() | list | join(' ')}}
+    {%- endfor %}
     {%- for entry in section.neighbors %}
-        {%- set values = entry.values() | list -%}
-{{ values | join(' ') }}
-{% endfor %}
+{{ entry.values() | list | join(' ')}}
+    {%- endfor %}
 {% endfor %}
 
-{% for section in mesh_grid_and_substrates -%}
+{%- for section in mesh_grid_and_substrates %}
 {{ section.title }}
-    {%- for entry in section.content -%}
-        {%- set values = entry.values() | list -%}
-{{ values | join(' ') }}
-{% endfor -%}
-{% endfor -%}
+    {%- for entry in section.content %}
+{{ entry.values() | list | join(' ')}}
+    {%- endfor %}
+{% endfor %}
 
 {%- for section in biological_processes %}
   {%- for subsection, items in section.items() %}
@@ -76,7 +72,7 @@ TEMPLATE_STR = \
 {{ item.name }} {{item.fix_name}} {{item.group}} {{item.fix_loc}} {{item.distance_m}} 1 zhi {% if item.comment %} # {{ item.comment }}{% endif %}
         {%- endif %}
     {%- endfor %}
-{%- endfor %} {{ "\n" }}
+{% endfor %}
 
 {%- for section in chemical_processes %}
 {{ section.title }}
@@ -96,7 +92,7 @@ TEMPLATE_STR = \
 {{ item.name }} {{item.fix_name}} {{item.group}} {{item.fix_loc}} {{item.sub1}} ratio {{item.coeff1}} {% if item.comment %} # {{ item.comment }}{% endif %}
         {%- endif %}
     {%- endfor %}
-{%- endfor %} {{ "\n" }}
+{% endfor %}
 
 {%- for section in computation_output %}
   {%- for subsection, items in section.items() %}

@@ -56,7 +56,7 @@ DEFAULT_INPUTSCRIPT = {
                          {"name": "grid_style", "loc": "nufeb/chemostat", 'p1': "4", 's1': 'sub', 's2': 'o2',
                           's3': 'no2', 's4': 'no3', 'grid_cell': '10e-6',
                           'comment': ''},
-                         {"name": '# set diffusion boundary conditions and initial concentrations (liquid:kg/m3'},
+                         {"name": '# set diffusion boundary conditions and initial concentrations (liquid:kg/m3)'},
                          {"name": "grid_modify", "action": "set", 'substrate': "sub", 'bound1': 'pp', 'bound2': 'pp',
                           'bound3': 'nd', 'init_conc': '1e-3',
                           'comment': '1 mg/L'},
