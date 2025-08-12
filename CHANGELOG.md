@@ -12,9 +12,12 @@
   * inferences are not guaranteed to make sensible guesses on initial/boundary concentrations or on diffusion parameters, it is on the user to check those
 
 ## New functions
+
 * Elastic boundary layers *x* microns above the surface of the biofilm are now possible for ``bioreactor`` boundary conditions
   * Set this via the ``elastic_bl`` parameter of ``set_boundary_scenario``. If unset, no elastic boundary layer will be used
   * Setting an elastic boundary layer with a non-``bioreactor`` scenarior will throw a ``ValueError``
+* Understands fixes for denitrifiers, imperfect denitrifiers which stop at nitric oxide, and anammox with an optional nitric oxide input pathway
+  * example taxa json libraries included for these
 
 ## Other
 
@@ -36,6 +39,8 @@
 * Adding type hints and docstrings as development touches code
 * Move Substrate into its own file
 * The lengthy default dictionary and the jinja2 template string it populates have been moved out of ``InputScriptBuilder`` and into their own files 
+* Understanding new growth fixes is a bit kludgy, TODO items listed
+* json files describing taxa now have version fields (currently 0.1.0) at the taxon and strategy levels
 
 # version 0.0.3
 

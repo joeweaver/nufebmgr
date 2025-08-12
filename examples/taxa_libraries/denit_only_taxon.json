@@ -48,44 +48,6 @@
     "outer_diameter": 1e-6,
     "morphology": "coccus",
     "description": "Full denitrifier"
-  },
-  "imperfect_denitrifier_no": {
-    "version": "0.0.1",
-    "growth_strategy": {
-      "name": "growth_imperf_denit_no",
-      "version": "0.0.1",
-      "sub-ID":"sub",
-      "K_s1" : 0.2,
-      "K_s2" : 0.2,
-      "K_s3" : 0.2,
-      "o2-ID": "o2",
-      "K_oh1": 1e-4,
-      "K_oh2": 1e-4,
-      "K_oh3": 1e-4,
-      "no3-ID":"no3",
-      "K_no3" : 2e-5,
-      "no2-ID": "no2",
-      "K_no2" : 2e-5,
-      "no-ID": "no",
-      "K_I3no" : 5e-5,
-      "nh-ID": "nh4",
-      "inxb" : 0.086,
-      "mu_max" : 7.2338e-5,
-      "yield" : 0.6,
-      "decay" : 4.7e-7,
-      "eta_g2" : 0.28,
-      "eta_g3" : 0.16,
-      "eta_Y" : 0.9
-    },
-    "division_strategy": {
-      "name":"divide_coccus",
-      "version": "0.0.1",
-      "diameter":1.36e-6
-    },
-    "diameter": 1e-6,
-    "density": 150,
-    "outer_diameter": 1e-6,
-    "morphology": "coccus"
   }
 }
 
