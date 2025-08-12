@@ -2,12 +2,13 @@
 from datetime import datetime
 from .version import VERSION
 
+INPUT_HEADER_WIDTH = 80
 DEFAULT_INPUTSCRIPT = {
-        "header": ["#----------------------------------------------------------------------#",
-                   "#                    NUFEB Simulation                                  #",
-                  f"#                Generated on: {datetime.now().strftime('%Y-%m-%d')}                              #",
-                  f"#                Using nufebmgr v{VERSION}                                 #",
-                   "#----------------------------------------------------------------------#"],
+        "header": ["#" + ("-" * (INPUT_HEADER_WIDTH-2)) + "#",
+                   "#" + "NUFEB Simulation".center(INPUT_HEADER_WIDTH-2) + "#",
+                   "#" + f"Generated on: {datetime.now().strftime('%Y-%m-%d')}".center(INPUT_HEADER_WIDTH-2) + "#",
+                   "#" + f"Using nufebmgr v{VERSION}".center(INPUT_HEADER_WIDTH-2) + "#",
+                   "#" + ("-" * (INPUT_HEADER_WIDTH-2)) + "#"],
 
         "system_settings": [
             {"title": "#----System Settings----#",
