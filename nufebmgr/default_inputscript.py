@@ -112,7 +112,7 @@ DEFAULT_INPUTSCRIPT = {
             {"title": "#----Physical Processes----#",
              "content": [{'name': 'Pairwise interaction between atoms'},
                          {"name": "pair_style", "pair_loc": "gran/hooke/history", 'p1': '1e-2', 'p2': "NULL",
-                          'p3': '1e-4', 'p4': 'NULL', 'p5': '0.0', 'p6': '0',
+                          'p3': '1e-3', 'p4': 'NULL', 'p5': '0.0', 'p6': '0',
                           'comment': ""},
                          {"name": "pair_coeff", "p1": "*", 'p2': '*', 'comment': ""},
                          {'name': 'Pairwise interaction between z-wall and atoms'},
