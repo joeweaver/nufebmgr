@@ -1,8 +1,7 @@
 from jinja2 import Template
 from .SimulationBox import SimulationBox
 from .Substrate import Substrate
-from typing import Any
-from typing import Dict
+from typing import Any, Dict, List
 from .default_inputscript import DEFAULT_INPUTSCRIPT
 from .inputscript_template import TEMPLATE_STR
 import copy
@@ -184,6 +183,7 @@ class InputScriptBuilder:
                 break
             if 'growth_strategy' not in active_taxa[k]:
                 raise KeyError(f"Growth strategy is not defined for taxon: {k}")
+            # TODO need to abstract this better. Overarching goal is that new fixes and taxa jsons shouldn't necessitate touching this
             if active_taxa[k]['growth_strategy']['name'] == 'growth_het':
                 entry ={}
                 entry["name"] = 'fix'
@@ -199,9 +199,125 @@ class InputScriptBuilder:
                 else:
                     entry['comment'] = ''
                 self.config_vals['biological_processes'][0]['growth'].append(entry)
+            elif active_taxa[k]['growth_strategy']['name'] == 'growth_denit':
+                entry = {}
+                entry["name"] = '\nfix'
+                entry["ID"] = f'growth_{k}'
+                entry['group-ID'] = k
+                entry['fix_loc'] = "nufeb/growth/denit &\n"
+                # TODO essentially preprocessing to make life easier in jinja, look into better ways
+                growth_strat = active_taxa[k]["growth_strategy"]
+                entry[growth_strat['sub-ID']] = self._composite_kvp(growth_strat, growth_strat['sub-ID'],
+                                                                    ['K_s1','K_s2','K_s3','K_s4','K_s5'])
+                entry[growth_strat['o2-ID']] = self._composite_kvp(growth_strat, growth_strat['o2-ID'],
+                                                                    ['K_oh1', 'K_oh2', 'K_oh3', 'K_oh4', 'K_oh5'])
+                entry[growth_strat['no3-ID']] = self._composite_kvp(growth_strat, growth_strat['no3-ID'],  ['K_no3'])
+                entry[growth_strat['no2-ID']] = self._composite_kvp(growth_strat, growth_strat['no2-ID'], ['K_no2'])
+                entry[growth_strat['n2o-ID']] = self._composite_kvp(growth_strat, growth_strat['n2o-ID'], ['K_n2o'])
+                entry[growth_strat['no-ID']] = self._composite_kvp(growth_strat,growth_strat['no-ID'],
+                                                                   ['K_no', 'K_I3no', 'K_I4no', 'K_I5no'])
+                entry[growth_strat['nh-ID']] = self._composite_kvp(growth_strat, growth_strat['nh-ID'], ['inxb'])
+                # the label bit is a bit ridiculous, need to fix when streamlining how fixes, taxon library,
+                # and templating work together
+                entry['growth_label'] = '\tgrowth'
+                entry['growth'] = growth_strat['mu_max']
+                entry['yield_label'] = 'yield'
+                entry['yield'] = growth_strat['yield']
+                entry['decay_label'] = 'decay'
+                entry['decay'] = str(growth_strat['decay']) + ' &\n'
+                entry['eta_g2_label'] = '\teta_g2'
+                entry['eta_g2'] = growth_strat['eta_g2']
+                entry['eta_g3_label'] = 'eta_g2'
+                entry['eta_g3'] = growth_strat['eta_g3']
+                entry['eta_g4_label'] = 'eta_g2'
+                entry['eta_g4'] = growth_strat['eta_g4']
+                entry['eta_g5_label'] = 'eta_g2'
+                entry['eta_g5'] = growth_strat['eta_g5']
+                entry['eta_Y_label'] = 'eta_Y'
+                entry['eta_Y'] = growth_strat['eta_Y']
+                self.config_vals['biological_processes'][0]['growth'].append(entry)
+            elif active_taxa[k]['growth_strategy']['name'] == 'growth_imperf_denit_no':
+                entry = {}
+                entry["name"] = '\nfix'
+                entry["ID"] = 'growth_imperf_denit_no'
+                entry['group-ID'] = k
+                entry['fix_loc'] = "nufeb/growth/imperf_denit_nitric_oxide &\n"
+                # TODO essentially preprocessing to make life easier in jinja, look into better ways
+                growth_strat = active_taxa[k]["growth_strategy"]
+                entry[growth_strat['sub-ID']] = self._composite_kvp(growth_strat, growth_strat['sub-ID'],
+                                                                    ['K_s1','K_s2','K_s3'])
+                entry[growth_strat['o2-ID']] = self._composite_kvp(growth_strat, growth_strat['o2-ID'],
+                                                                    ['K_oh1', 'K_oh2', 'K_oh3'])
+                entry[growth_strat['no3-ID']] = self._composite_kvp(growth_strat, growth_strat['no3-ID'],  ['K_no3'])
+                entry[growth_strat['no2-ID']] = self._composite_kvp(growth_strat, growth_strat['no2-ID'], ['K_no2'])
+                entry[growth_strat['no-ID']] = self._composite_kvp(growth_strat,growth_strat['no-ID'], ['K_I3no'])
+                entry[growth_strat['nh-ID']] = self._composite_kvp(growth_strat, growth_strat['nh-ID'], ['inxb'])
+                # the label bit is a bit ridiculous, need to fix when streamlining how fixes, taxon library,
+                # and templating work together
+                entry['growth_label'] = '\tgrowth'
+                entry['growth'] = growth_strat['mu_max']
+                entry['yield_label'] = 'yield'
+                entry['yield'] = growth_strat['yield']
+                entry['decay_label'] = 'decay'
+                entry['decay'] = str(growth_strat['decay']) + ' &\n'
+                entry['eta_g2_label'] = '\teta_g2'
+                entry['eta_g2'] = growth_strat['eta_g2']
+                entry['eta_g3_label'] = 'eta_g2'
+                entry['eta_g3'] = growth_strat['eta_g3']
+                entry['eta_Y_label'] = 'eta_Y'
+                entry['eta_Y'] = growth_strat['eta_Y']
+                self.config_vals['biological_processes'][0]['growth'].append(entry)
+            elif active_taxa[k]['growth_strategy']['name'] == 'growth_anammox_two_pathway':
+                entry = {}
+                entry["name"] = '\nfix'
+                entry["ID"] = 'growth_anammox_two_pathway'
+                entry['group-ID'] = k
+                entry['fix_loc'] = "nufeb/growth/anammox_two_pathway &\n"
+                # TODO essentially preprocessing to make life easier in jinja, look into better ways
+                growth_strat = active_taxa[k]["growth_strategy"]
+                entry[growth_strat['o2-ID']] = self._composite_kvp(growth_strat, growth_strat['o2-ID'], ['K_oh_an'])
+                entry[growth_strat['n2o-ID']] = self._composite_kvp(growth_strat, growth_strat['n2o-ID'], ['K_n2o_an'])
+                entry[growth_strat['no-ID']] = self._composite_kvp(growth_strat, growth_strat['no-ID'], ['K_no_an'])
+                entry[growth_strat['nh-ID']] = self._composite_kvp(growth_strat, growth_strat['nh-ID'],
+                                                                   ['K_nh_an', 'inxb_an'])
+                entry['no3-ID'] = '\tno3 &\n'
+                # the label bit is a bit ridiculous, need to fix when streamlining how fixes, taxon library,
+                # and templating work together
+                entry['growth_label'] = '\tgrowth'
+                entry['growth'] = growth_strat['mu_max']
+                entry['yield_label'] = 'yield'
+                entry['yield'] = growth_strat['yield']
+                entry['decay_label'] = 'decay'
+                entry['decay'] = str(growth_strat['decay']) + ' &\n'
+                entry['eta_I_AN_label'] = '\teta_I_an'
+                entry['eta_I_AN'] = growth_strat['eta_I_an']
+                entry['eta_S_AN_label'] = 'eta_S_an'
+                entry['eta_S_an'] = growth_strat['eta_S_an']
+                self.config_vals['biological_processes'][0]['growth'].append(entry)
             else:
                 raise KeyError(f"Taxon {k} has unrecognized growth strategy: {active_taxa[k]['growth_strategy']['name'] }")
 
+    def _composite_kvp(self,db: Dict[str,str], main_key:str, value_keys: List[str]) -> str:
+        """
+        Utility function to take a growth strategy dictionary where multiple parameters follow a named entry and
+        combine them into one flat string, prepended by a tab and ending with a LAMMPS line continuation and newline.
+
+        This is a somewhat stopgap measure as the original jinja template just takes key value pairs. It also adds a
+        bit of pretty print formatting with tabs and line continuations, which is nice even for single pairs.
+
+        Example: Assuming a growth strategy dict contains something like a sub-ID:'sub' followed by multiple K_S
+        constants.  {'sub_id':sub, 'ks1':0.2 'ks2':03}
+        If the fix does not have named parameters, it might 'want' to be expressed as '\t sub 0.2 0.3 &\n'.
+        This function helps with that formatting.
+        Here, db would be active_taxa[k]["growth_strategy"]
+        and value_keys would be ['ks1', 'ks2']
+
+        :param db: The growth strategy dict. e.g active_taxa[k]["growth_strategy"]
+        :param main_key: The label to use at the start
+        :param value_keys: The keys with values to be concatenated
+        :return: The formatted string
+        """
+        return (f'\t{main_key} ' + ' '.join(str(db[key]) for key in value_keys) +' &\n')
 
     def clear_division(self):
         self.config_vals['biological_processes'][0]['division'] = []
@@ -211,7 +327,7 @@ class InputScriptBuilder:
         self.config_vals['biological_processes'][0]['division'].append({'name':'Division'})
 
         for k,v in self.group_assignments.items():
-            if k not in active_taxa:
+            if k not in active_taxa: # TODO should this be an error?
                 break
             if 'division_strategy' not in active_taxa[k]:
                 raise KeyError(f"Division strategy is not defined for taxon: {k}")
@@ -222,9 +338,8 @@ class InputScriptBuilder:
                 entry['group-ID'] = k
                 entry['fix_loc'] = "nufeb/division/coccus"
                 for kj,vj in active_taxa[k]['division_strategy'].items():
-                    if kj != 'name':
-                        if kj != 'eps_dens':
-                             entry[kj] = vj
+                    if kj not in ['name','eps_dens', 'version']:
+                        entry[kj] = vj
 
                 entry['seed']= seed
                 if  'eps_dens' in active_taxa[k]['division_strategy']:
