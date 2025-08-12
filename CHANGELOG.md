@@ -29,6 +29,9 @@
   * ``InputScriptBuilder``
     * diffusion grid test updated to pass
     * testing various segments related to substrate
+  * ``NufebProject``
+    * Sanity checking that taxa are known (*e.g.,* via ``add_taxon_by_jsonfile``)
+      * internally, this means that there is an entry in ``active_taxa`` for anything that shows up in a composition and it gets checked during ``_assign_taxa``
 * diffusion boundary conditions now set up during building instead of a part of ``Substrate`` class
 * Adding type hints and docstrings as development touches code
 * Move Substrate into its own file

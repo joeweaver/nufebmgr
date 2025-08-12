@@ -1,0 +1,113 @@
+{
+  "denitrifier": {
+    "growth_strategy": {
+      "name": "growth_denit",
+      "sub-ID":"sub",
+      "K_s1" : 3.5e-5,
+      "K_s2" : 3.5e-5,
+      "K_s3" : 3.5e-5,
+      "K_s4" : 3.5e-5,
+      "K_s5" : 3.5e-5,
+      "o2-ID": "o2",
+      "K_oh1": 0,
+      "K_oh2": 0,
+      "K_oh3": 0,
+      "K_oh4": 0,
+      "K_oh5": 0,
+      "no3-ID":"no3",
+      "K_no3" : 0,
+      "no2-ID": "no2",
+      "K_no2" : 0,
+      "n2o-ID": "no2",
+      "K_n2o" : 0,
+      "no-ID": "no",
+      "K_no" : 0,
+      "K_I3no" : 0,
+      "K_I4no" : 0,
+      "K_I5no" : 0,
+      "nh-ID": "nh",
+      "inxb" : 0,
+      "mu_max" : 0,
+      "yield" : 0,
+      "Decay" : 0,
+      "eta_g2" : 0,
+      "eta_g3" : 0,
+      "eta_g4" : 0,
+      "eta_g5" : 0,
+      "eta_Y" : 0
+    },
+    "division_strategy": {
+      "name":"divide_coccus",
+      "diameter":1.36e-6
+    },
+    "diameter": 1e-6,
+    "density": 150,
+    "outer_diameter": 1e-6,
+    "morphology": "coccus"
+  },
+    "imperfect_denitrifier_no": {
+    "growth_strategy": {
+      "name": "growth_imperf_denit_no",
+      "sub-ID":"sub",
+      "K_s1" : 3.5e-5,
+      "K_s2" : 3.5e-5,
+      "K_s3" : 3.5e-5,
+      "o2-ID": "o2",
+      "K_oh1": 0,
+      "K_oh2": 0,
+      "K_oh3": 0,
+      "no3-ID":"no3",
+      "K_no3" : 0,
+      "no2-ID": "no2",
+      "K_no2" : 0,
+      "n2o-ID": "no2",
+      "K_n2o" : 0,
+      "no-ID": "no",
+      "K_I3no" : 0,
+      "nh-ID": "nh",
+      "inxb" : 0,
+      "mu_max" : 0,
+      "yield" : 0,
+      "Decay" : 0,
+      "eta_g2" : 0,
+      "eta_g3" : 0,
+      "eta_Y" : 0
+    },
+    "division_strategy": {
+      "name":"divide_coccus",
+      "diameter":1.36e-6
+    },
+    "diameter": 1e-6,
+    "density": 150,
+    "outer_diameter": 1e-6,
+    "morphology": "coccus"
+  },
+  "anammox_two_pathway": {
+    "growth_strategy": {
+      "name": "growth_anammox_two_pathway",
+      "o2-ID": "o2",
+      "K_oh_an": 0,
+      "n2o-ID": "n2o",
+      "K_n2o_an": 0,
+      "no-ID": "no",
+      "K_no_an": 0,
+      "nh-ID": "nh",
+      "K_nh_an": 0,
+      "inxb_an": 0,
+      "mu_max": 0,
+      "yield": 0,
+      "decay": 0,
+      "eta_I_an": 1,
+      "eta_S_an": 1
+    },
+    "division_strategy": {
+      "name":"divide_coccus",
+      "diameter":1.36e-6
+    },
+    "diameter": 1e-6,
+    "density": 150,
+    "outer_diameter": 1e-6,
+    "morphology": "coccus"
+  }
+}
+

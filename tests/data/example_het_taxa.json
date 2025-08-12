@@ -1,0 +1,90 @@
+{
+  "basic_heterotroph": {
+    "growth_strategy": {
+      "name": "growth_het",
+      "sub-ID":"sub",
+      "sub-Ks" : 3.5e-5,
+      "o2-ID": "o2",
+      "o2-Ks": 0,
+      "no2-ID":"no2",
+      "no2-Ks" : 0,
+      "no3-ID": "no3",
+      "no3-Ks": 0,
+      "mu_max-ID": "growth",
+      "mu_max": 0.00028,
+      "yield-ID": "yield",
+      "yield": 0.61,
+      "decay-ID": "decay",
+      "decay": 0,
+      "anoxic-ID": "anoxic",
+      "anoxic": 0
+    },
+    "division_strategy": {
+      "name":"divide_coccus",
+      "diameter":1.36e-6
+    },
+    "diameter": 1e-6,
+    "density": 150,
+    "outer_diameter": 1e-6,
+    "morphology": "coccus"
+  },
+  "slow_heterotroph": {
+    "growth_strategy": {
+      "name": "growth_het",
+      "sub-ID":"sub",
+      "sub-Ks" : 3.5e-5,
+      "o2-ID": "o2",
+      "o2-Ks": 0,
+      "no2-ID":"no2",
+      "no2-Ks" : 0,
+      "no3-ID": "no3",
+      "no3-Ks": 0,
+      "mu_max-ID": "growth",
+      "mu_max": 0.00014,
+      "yield-ID": "yield",
+      "yield": 0.61,
+      "decay-ID": "decay",
+      "decay": 0,
+      "anoxic-ID": "anoxic",
+      "anoxic": 0
+    },
+    "division_strategy": {
+      "name":"divide_coccus",
+      "diameter":1.36e-6
+    },
+    "diameter": 1e-6,
+    "density": 150,
+    "outer_diameter": 1e-6,
+    "morphology": "coccus"
+  },
+  "small_heterotroph": {
+    "growth_strategy": {
+      "name": "growth_het",
+      "sub-ID":"sub",
+      "sub-Ks" : 3.5e-5,
+      "o2-ID": "o2",
+      "o2-Ks": 0,
+      "no2-ID":"no2",
+      "no2-Ks" : 0,
+      "no3-ID": "no3",
+      "no3-Ks": 0,
+      "mu_max-ID": "growth",
+      "mu_max": 0.00028,
+      "yield-ID": "yield",
+      "yield": 0.61,
+      "decay-ID": "decay",
+      "decay": 0,
+      "anoxic-ID": "anoxic",
+      "anoxic": 0
+    },
+    "division_strategy": {
+      "name":"divide_coccus",
+      "diameter":1.0e-6
+    },
+    "diameter": 0.8e-6,
+    "density": 150,
+    "outer_diameter": 0.8e-6,
+    "morphology": "coccus"
+  }
+}
+

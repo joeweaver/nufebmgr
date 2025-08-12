@@ -291,7 +291,6 @@ class NufebProject:
         with open(jsonfile) as f:
             d = json.load(f)
         for item in d:
-            a = 1
             self.active_taxa[item] = d[item]
 
     def set_composition(self, composition):
@@ -307,12 +306,15 @@ class NufebProject:
         return len(self.group_assignments.keys())
 
     def _assign_taxa(self):
+        unknown_bugs = set(self.composition.keys()) - set(self.active_taxa.keys())
+        if len(unknown_bugs) !=0:
+            raise ValueError(f'Setting composition with unknown taxon: {", ".join(sorted(unknown_bugs))}')
+
         if self.taxa_pre_assigned:
             return
 
         if self.spatial_distribution == "even":
-            # TODO error check that all taxa have entries
-            a1 =list(self.active_taxa.keys())
+            a1 = list(self.active_taxa.keys())
             s1 =self._n_members()
             all_compositions = [float(value) for value in self.composition.values()]
             total = sum(all_compositions)
