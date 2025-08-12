@@ -25,6 +25,7 @@
   * it still should be specified, but now the order of specification is unimportant
 * Default physical parameters tweaked to avoid undue skidding and jittering at low growth rates
 * Generated inputscripts now list the version of ``nufebmgr`` used
+* Multiple bits of pretty-printing added to generated inpuscript
 
 ## Code internals
 

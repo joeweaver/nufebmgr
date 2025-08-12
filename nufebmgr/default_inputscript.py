@@ -2,16 +2,16 @@
 from datetime import datetime
 from .version import VERSION
 
-INPUT_HEADER_WIDTH = 80
+INPUT_FILE_WIDTH = 80
 DEFAULT_INPUTSCRIPT = {
-        "header": ["#" + ("-" * (INPUT_HEADER_WIDTH-2)) + "#",
-                   "#" + "NUFEB Simulation".center(INPUT_HEADER_WIDTH-2) + "#",
-                   "#" + f"Generated on: {datetime.now().strftime('%Y-%m-%d')}".center(INPUT_HEADER_WIDTH-2) + "#",
-                   "#" + f"Using nufebmgr v{VERSION}".center(INPUT_HEADER_WIDTH-2) + "#",
-                   "#" + ("-" * (INPUT_HEADER_WIDTH-2)) + "#"],
+        "header": ["#" + ("-" * (INPUT_FILE_WIDTH - 2)) + "#",
+                   "#" + "NUFEB Simulation".center(INPUT_FILE_WIDTH - 2) + "#",
+                   "#" + f"Generated on: {datetime.now().strftime('%Y-%m-%d')}".center(INPUT_FILE_WIDTH - 2) + "#",
+                   "#" + f"Using nufebmgr v{VERSION}".center(INPUT_FILE_WIDTH - 2) + "#",
+                   "#" + ("-" * (INPUT_FILE_WIDTH - 2)) + "#"],
 
         "system_settings": [
-            {"title": "#----System Settings----#",
+            {"title": "#" + "System Settings".center(INPUT_FILE_WIDTH-2, '-') + "#",
              "content": [{"name": "units", "unit_type": "si", 'comment': "Using si units (m, s, kg)"},
                          {"name": "atom_style", "style": "coccus", 'comment': "Using NUFEB coccus"},
                          {"name": "atom_modify", "method": "map", "struct": "array", 'method2': 'sort', "time": "10",
@@ -32,7 +32,7 @@ DEFAULT_INPUTSCRIPT = {
         ],
 
         "microbes_and_groups": [
-            {"title": "#----Microbes and functional groups----#",
+            {"title": "#" + "Microbes and functional groups".center(INPUT_FILE_WIDTH-2, '-') + "#",
              'bug_groups': [
                  {"name": "group", "group_name": "het_1", 'param': "type", 'group_num': '1',
                   'comment': '# Regular heterotrophs'},
@@ -51,7 +51,7 @@ DEFAULT_INPUTSCRIPT = {
         ],
 
         "mesh_grid_and_substrates": [
-            {"title": "#----Mesh Grid and Substrates----#",
+            {"title": "#" + "Mesh Grid and Substrates".center(INPUT_FILE_WIDTH-2, '-') + "#",
              "content": [{"name": "# define grid style, substrate names, and grid size"},
                          {"name": "grid_style", "loc": "nufeb/chemostat", 'p1': "4", 's1': 'sub', 's2': 'o2',
                           's3': 'no2', 's4': 'no3', 'grid_cell': '10e-6',
@@ -74,7 +74,7 @@ DEFAULT_INPUTSCRIPT = {
         ],
 
         "biological_processes": [
-            {"title": "#----Biological Processes----#",
+            {"title": "#" + "Biological Processes".center(INPUT_FILE_WIDTH-2, '-') + "#",
              "growth": [{'name': 'Heterotrophic growth'},
                          {"name": "fix", "fix_name": "growth_het_1", 'group': 'het_1', 'fix_loc': "nufeb/growth/het",
                           'l1': 'sub', 'v1': '1e-3', 'l2': 'o2', 'v2': '0', 'l3': 'no2', 'v3': '0',
@@ -110,7 +110,7 @@ DEFAULT_INPUTSCRIPT = {
         ],
 
         "physical_processes": [
-            {"title": "#----Physical Processes----#",
+            {"title": "#" + "Physical Processes".center(INPUT_FILE_WIDTH-2, '-') + "#",
              "content": [{'name': 'Pairwise interaction between atoms'},
                          {"name": "pair_style", "pair_loc": "gran/hooke/history", 'p1': '1e-2', 'p2': "NULL",
                           'p3': '1e-3', 'p4': 'NULL', 'p5': '0.0', 'p6': '0',
@@ -129,18 +129,18 @@ DEFAULT_INPUTSCRIPT = {
              }
         ],
         "post_physical_processes": [
-            {"title": "#----Post-Physical Processes----#",
+            {"title": "#" + "Post-Physical Processes".center(INPUT_FILE_WIDTH-2, '-') + "#",
              "boundary_layer": []
              }
         ],
         "chemical_processes": [
-            {"title": "#----Chemical Processes----#",
+            {"title": "#" + "Chemical Processes".center(INPUT_FILE_WIDTH-2, '-') + "#",
              "diffusion_coefficients": [],
              "diffusion_biofilm_ratios": []
              }
         ],
         "computation_output": [
-            {"title": "#----Computations and Outputs----#",
+            {"title": "#" + "Computations and Outputs".center(INPUT_FILE_WIDTH-2, '-') + "#",
              "ab_track": [{'name': 'Abundance Tracking'},
                          {"name": "variable", "varname": "nhet1", 'op': 'equal', 'expression': '"count(het_1)"',
                           'comment': 'total number of regular heterotrophs'},
@@ -161,7 +161,7 @@ DEFAULT_INPUTSCRIPT = {
              }
         ],
         "run": [
-            {"title": "#----Run----#",
+            {"title": "#" + "Run".center(INPUT_FILE_WIDTH-2, '-') + "#",
              "content": [{'name': 'run with timestep for physical (pairdt) and chemical (diffdt) processes'},
                          {"name": "run_style", "run_type": "nufeb", 'p1': 'diffdt', 'v1': '1e-4',
                           'p2': 'difftol', 'v2': '1e-6', 'p3': 'pairdt', 'v3': '1e-2',
