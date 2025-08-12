@@ -76,13 +76,6 @@ TEMPLATE_STR = \
 
 {%- for section in chemical_processes %}
 {{ section.title }}
-    {%- for item in section.diffusion_coefficients %}
-        {%- if 'title' in item %}
-#{{ item.title }}
-         {%- else %}
-{{ item.name }} {{item.fix_name}} {{item.group}} {{item.fix_loc}} {{item.sub1}} {{item.coeff1}} {% if item.comment %} # {{ item.comment }}{% endif %}
-        {%- endif %}
-    {%- endfor %}
 
     {%- for item in section.diffusion_biofilm_ratios %}
         {%- if 'title' in item %}
@@ -90,6 +83,14 @@ TEMPLATE_STR = \
 #{{ item.title }}
          {%- else %}
 {{ item.name }} {{item.fix_name}} {{item.group}} {{item.fix_loc}} {{item.sub1}} ratio {{item.coeff1}} {% if item.comment %} # {{ item.comment }}{% endif %}
+        {%- endif %}
+    {%- endfor %}
+    
+    {%- for item in section.diffusion_coefficients %}
+        {%- if 'title' in item %}
+#{{ item.title }}
+         {%- else %}
+{{ item.name }} {{item.fix_name}} {{item.group}} {{item.fix_loc}} {{item.sub1}} {{item.coeff1}} {% if item.comment %} # {{ item.comment }}{% endif %}
         {%- endif %}
     {%- endfor %}
 {% endfor %}

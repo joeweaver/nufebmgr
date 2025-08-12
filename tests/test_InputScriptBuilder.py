@@ -123,7 +123,24 @@ def test_build_diffusion():
     isb.build_diffusion(subs_set1)
     diffusion_stuff = isb.config_vals['chemical_processes'][0]
 
-    expected = {'title':'#----Chemical Processes----#',
+    expected = {'title':'#------------------------------Chemical Processes------------------------------#',
+                'diffusion_biofilm_ratios': [
+                    {'title': 'Ratio of diffusion in biofilm as compared to water'},
+                    {'name': 'fix',
+                     'fix_name': f'coeff_test_sub_a',
+                     'group': 'all',
+                     'fix_loc': 'nufeb/diffusion_coeff',
+                     'sub1': 'test_sub_a',
+                     'coeff1': 0.5,
+                     'comment': ''},
+                    {'name': 'fix',
+                     'fix_name': f'coeff_test_sub_b',
+                     'group': 'all',
+                     'fix_loc': 'nufeb/diffusion_coeff',
+                     'sub1': 'test_sub_b',
+                     'coeff1': 0.7,
+                     'comment': ''}
+                ],
                 'diffusion_coefficients': [
                     {'title': 'Diffusion in water'},
                     {'name': 'fix',
@@ -140,27 +157,11 @@ def test_build_diffusion():
                      'sub1': 'test_sub_b',
                      'coeff1': 2.1e-9,
                      'comment': ''}
-                ],
-                'diffusion_biofilm_ratios':[
-                    {'title': 'Ratio of diffusion in biofilm as compared to water'},
-                    {'name': 'fix',
-                     'fix_name': f'coeff_test_sub_a',
-                     'group': 'all',
-                     'fix_loc': 'nufeb/diffusion_coeff',
-                     'sub1': 'test_sub_a',
-                     'coeff1': 0.5,
-                     'comment': ''},
-                    {'name': 'fix',
-                     'fix_name': f'coeff_test_sub_b',
-                     'group': 'all',
-                     'fix_loc': 'nufeb/diffusion_coeff',
-                     'sub1': 'test_sub_b',
-                     'coeff1': 0.7,
-                     'comment': ''}
                 ]
                 }
 
     assert expected == diffusion_stuff
+
 
 def test_build_postphysical():
     isb = InputScriptBuilder()
@@ -170,7 +171,7 @@ def test_build_postphysical():
     isb.build_post_physical(20)
     new_data = isb.config_vals['post_physical_processes'][0]
 
-    expected = {'title': '#----Post-Physical Processes----#',
+    expected = {'title': '#---------------------------Post-Physical Processes----------------------------#',
                 'boundary_layer': [
                     {'title': 'Elastic boundary layer above biofilm surface'},
                     {'name': 'fix',

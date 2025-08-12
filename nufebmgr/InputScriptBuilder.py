@@ -534,6 +534,19 @@ class InputScriptBuilder:
                     self.config_vals['chemical_processes'][0]['diffusion_coefficients']
                     self.config_vals['chemical_processes'][0]['diffusion_biofilm_ratios']
             """
+        self.config_vals['chemical_processes'][0]['diffusion_biofilm_ratios'] = []
+        self.config_vals['chemical_processes'][0]['diffusion_biofilm_ratios'].append(
+            {'title': 'Ratio of diffusion in biofilm as compared to water'})
+        for substrate in substrates.values():
+            diff_dict = {'name': 'fix',
+                         'fix_name': f'coeff_{substrate.name}',
+                         'group': 'all',
+                         'fix_loc': 'nufeb/diffusion_coeff',
+                         'sub1': substrate.name,
+                         'coeff1': substrate.biofilm_diffusion_ratio,
+                         'comment': ''}
+            self.config_vals['chemical_processes'][0]['diffusion_biofilm_ratios'].append(diff_dict)
+
         self.config_vals['chemical_processes'][0]['diffusion_coefficients'] = []
         self.config_vals['chemical_processes'][0]['diffusion_coefficients'].append({'title': 'Diffusion in water'})
         for substrate in substrates.values():
@@ -546,17 +559,7 @@ class InputScriptBuilder:
                          'comment': ''}
             self.config_vals['chemical_processes'][0]['diffusion_coefficients'].append(diff_dict)
 
-        self.config_vals['chemical_processes'][0]['diffusion_biofilm_ratios'] = []
-        self.config_vals['chemical_processes'][0]['diffusion_biofilm_ratios'].append({'title': 'Ratio of diffusion in biofilm as compared to water'})
-        for substrate in substrates.values():
-            diff_dict = {'name': 'fix',
-                         'fix_name': f'coeff_{substrate.name}',
-                         'group': 'all',
-                         'fix_loc': 'nufeb/diffusion_coeff',
-                         'sub1': substrate.name,
-                         'coeff1': substrate.biofilm_diffusion_ratio,
-                         'comment': ''}
-            self.config_vals['chemical_processes'][0]['diffusion_biofilm_ratios'].append(diff_dict)
+
 
     def build_t6ss(self, t6ss_attackers,t6ss_vulns,seed):
         if not t6ss_attackers:
