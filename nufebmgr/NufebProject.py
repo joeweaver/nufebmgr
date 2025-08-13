@@ -122,23 +122,6 @@ class NufebProject:
 
                       }
 
-    # Default configuration data
-    DEFAULT_INPUTSCRIPT = {
-        "header": ["#----------------------------------------------------------------------#"
-                   "#                    NUFEB Simulation                                  #",
-                   f"#               Generated on: {datetime.now().strftime('%Y-%m-%d')}   #",
-                    "#----------------------------------------------------------------------#"],
-
-        "system_settings": [
-            {"title": "#----System Settings----#",
-             "content": {"boundary": {"l": "pp", "b":"pp", "upper":"ff"},
-                        "timeout": {"time": "30", "unit": "s"},
-                         "cache_size": {"time": "30", "unit": "s"}
-                         }
-             }
-        ]
-    }
-
     def __init__(self,seed=1701):
         self.seed = seed
         np.random.seed(seed)
