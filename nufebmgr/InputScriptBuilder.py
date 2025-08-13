@@ -227,11 +227,11 @@ class InputScriptBuilder:
                 entry['decay'] = str(growth_strat['decay']) + ' &\n'
                 entry['eta_g2_label'] = '\teta_g2'
                 entry['eta_g2'] = growth_strat['eta_g2']
-                entry['eta_g3_label'] = 'eta_g2'
+                entry['eta_g3_label'] = 'eta_g3'
                 entry['eta_g3'] = growth_strat['eta_g3']
-                entry['eta_g4_label'] = 'eta_g2'
+                entry['eta_g4_label'] = 'eta_g4'
                 entry['eta_g4'] = growth_strat['eta_g4']
-                entry['eta_g5_label'] = 'eta_g2'
+                entry['eta_g5_label'] = 'eta_g5'
                 entry['eta_g5'] = growth_strat['eta_g5']
                 entry['eta_Y_label'] = 'eta_Y'
                 entry['eta_Y'] = growth_strat['eta_Y']
@@ -262,7 +262,7 @@ class InputScriptBuilder:
                 entry['decay'] = str(growth_strat['decay']) + ' &\n'
                 entry['eta_g2_label'] = '\teta_g2'
                 entry['eta_g2'] = growth_strat['eta_g2']
-                entry['eta_g3_label'] = 'eta_g2'
+                entry['eta_g3_label'] = 'eta_g3'
                 entry['eta_g3'] = growth_strat['eta_g3']
                 entry['eta_Y_label'] = 'eta_Y'
                 entry['eta_Y'] = growth_strat['eta_Y']
@@ -276,7 +276,7 @@ class InputScriptBuilder:
                 # TODO essentially preprocessing to make life easier in jinja, look into better ways
                 growth_strat = active_taxa[k]["growth_strategy"]
                 entry[growth_strat['o2-ID']] = self._composite_kvp(growth_strat, growth_strat['o2-ID'], ['K_oh_an'])
-                entry[growth_strat['n2o-ID']] = self._composite_kvp(growth_strat, growth_strat['n2o-ID'], ['K_n2o_an'])
+                entry[growth_strat['no2-ID']] = self._composite_kvp(growth_strat, growth_strat['no2-ID'], ['K_no2_an'])
                 entry[growth_strat['no-ID']] = self._composite_kvp(growth_strat, growth_strat['no-ID'], ['K_no_an'])
                 entry[growth_strat['nh-ID']] = self._composite_kvp(growth_strat, growth_strat['nh-ID'],
                                                                    ['K_nh_an', 'inxb_an'])
