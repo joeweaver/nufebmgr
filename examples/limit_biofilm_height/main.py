@@ -31,7 +31,7 @@ def configure_project():
         prj.arm_t6ss(taxon="attacker",effector="toxin_a",harpoon_len=1.3e-6,cooldown=100)
         prj.vuln_t6ss(taxon="immune",effector="toxin_a",prob=1,to_group="vuln_intoxicated")
         prj.limit_biofilm_height(2)
-        prj.set_runtime(4*7*24*60*60)
+        prj.run_for_N_steps(4*7*24*60*60)
 
         atom_in, inputscript = prj.generate_case()
         return atom_in, inputscript

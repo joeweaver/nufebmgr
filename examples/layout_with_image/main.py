@@ -17,7 +17,7 @@ def configure_project():
         prj.simple_image_layout('layout.png', mappings)
         prj.set_track_abs()
         prj.enable_thermo_output(timestep=1)
-        prj.set_runtime(int(6*60*60/900)) # 6 hours assuming 900s biological timestep
+        prj.run_for_N_steps(int(6*60*60/900)) # 6 hours assuming 900s biological timestep
 
         atom_in, inputscript = prj.generate_case()
         return atom_in, inputscript

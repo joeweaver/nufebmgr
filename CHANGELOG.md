@@ -10,6 +10,7 @@
 * Automatic diffusion grid size now limited to 1, 1.5, or 2.0 microns
 * inferring substrates based on metabolisms must now be explicitly enabled (``enable_inferring_substrates``)
   * inferences are not guaranteed to make sensible guesses on initial/boundary concentrations or on diffusion parameters, it is on the user to check those
+* ``set_runtime`` was ambiguously named (number of steps, total simulation time?) and has been renamed to ``run_for_N_steps``
 
 ## New functions
 
@@ -18,6 +19,10 @@
   * Setting an elastic boundary layer with a non-``bioreactor`` scenarior will throw a ``ValueError``
 * Understands fixes for denitrifiers, imperfect denitrifiers which stop at nitric oxide, and anammox with an optional nitric oxide input pathway
   * example taxa json libraries included for these
+* Can now have control over biological timestep
+  * directly via ``set_biological_timestep_size_s``
+  * optionally as part of the new convenience function ``run_for_N_hours``
+  * note that ``set_runtime`` is now more properly named ``run_for_N_steps``
 
 ## Other
 

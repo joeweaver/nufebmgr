@@ -476,13 +476,16 @@ class InputScriptBuilder:
                         entry[kj] = vj
                 self.config_vals['biological_processes'][0]['lysis'].append(entry)
 
-    def build_run(self, runtime):
+    def build_run(self, runtime, biostep_s):
         content = self.config_vals['run'][0]['content']
-        bio_timestep=900
+        bio_timestep=biostep_s
         for i,item in enumerate(content):
             if item['name']=='run':
-                run_hours = runtime/60/60/bio_timestep
+                run_hours = (runtime*bio_timestep)/(60*60)
                 new_item = {"name": "run", "val": f'{runtime}', 'comment': f'# run duration ({run_hours} H)'}
+                content[i]=new_item
+            if item['name']=='timestep':
+                new_item = {"name": "timestep", "val": f'{bio_timestep}', 'comment': f'# seconds per timestep)'}
                 content[i]=new_item
 
     def build_post_physical(self, elastic_bl:float) -> None:

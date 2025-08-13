@@ -14,6 +14,10 @@ from .TaxaAssigmentManager import TaxaAssignmentManager
 from .BugPos import BugPos#
 
 class NufebProject:
+    runsteps: int
+    biostep: int
+
+    # TODO move built-in templates into their own file
     taxa_templates = {"basic_heterotroph": {'growth_strategy':
                                                 {'name': 'growth_het',
                                                  'sub-ID':'sub',
@@ -119,7 +123,6 @@ class NufebProject:
                                             'outer_diameter': 0.8e-6,
                                             'morphology': 'coccus',
                                             },
-
                       }
 
     def __init__(self,seed=1701):
@@ -139,7 +142,7 @@ class NufebProject:
         self.t6ss_vulns = {}
         self.taxa_pre_assigned = False
         self.biostep = 900
-        self.runtime = int(24*60*60/self.biostep) # default 24 hours assuming 900 s biological timestep
+        self.run_steps = int(24 * 60 * 60 / self.biostep) # default 24 hours assuming 900 s biological timestep
         self.spatial_distribution_params = {}
         self.substrates = {}  # TODO might be better to refactor as a list, since now every Substrate has its own name
         self.boundary_scenario = "bioreactor"
@@ -290,8 +293,11 @@ class NufebProject:
 
     def _assign_taxa(self):
         unknown_bugs = set(self.composition.keys()) - set(self.active_taxa.keys())
-        if len(unknown_bugs) !=0:
+        if len(unknown_bugs) != 0:
             raise ValueError(f'Setting composition with unknown taxon: {", ".join(sorted(unknown_bugs))}')
+        uncomposed_bugs = set(self.active_taxa.keys()) - set(self.composition.keys())
+        if len(uncomposed_bugs) != 0:
+            raise ValueError(f'Composition not set for taxon taxon (use 0 if not initially present): {", ".join(sorted(uncomposed_bugs))}')
 
         if self.taxa_pre_assigned:
             return
@@ -377,8 +383,64 @@ class NufebProject:
          config_content = template.render(config_values)
          return(config_content)
 
-    def set_runtime(self,time):
-        self.runtime = time
+    def run_for_N_steps(self, steps:int ) -> None:
+        """
+        Every NUFEB simulation is runs over N timesteps. Each timestep is a biological step which represents X secconds.
+        This can be used to set the number of steps to run. Total simulated time is N*X seconds.
+
+        This value can be overwritten by subsequent calls to ``run_for_N_hours()`` and the simulation can end
+        before N steps if ``stop_at_biomass_percent()`` is called.
+
+        :param steps: Number of simulation steps.
+
+        See Also
+        --------
+        Explanation of NUFEB timestepping
+        https://nufeb.readthedocs.io/en/master/run_style_nufeb.html
+        """
+        self.run_steps = steps
+
+    def set_biological_timestep_size_s(self, time_s: int) -> None:
+        """
+        Every NUFEB simulation is runs over N timesteps. Each timestep is a biological step which represents X secconds.
+        This can be used to set the biological timestep to something other than the default 900s (15 min).
+
+        :param time_s: Simulation seconds per timestep. Only whole numbers are allowed. 0 and negative are undefined behaviour
+
+        See Also
+        --------
+        Explanation of NUFEB timestepping
+        https://nufeb.readthedocs.io/en/master/run_style_nufeb.html
+        """
+        self.biostep = time_s
+
+    def run_for_N_hours(self, time_h:float, biostep_s=None):
+        """
+         Every NUFEB simulation is runs over N timesteps. Each timestep is a biological step which represents X secconds.
+         Often we want to specify the total simulated time rather than the number of timesteps instead of keeping track
+         of the biological timestep and updating the math.. This function allows doing so, and also optionally adjusting
+         the biological time step at the same time - making it straightforward to specify things like:
+            'simulate 18 hours, with biological steps every 600 seconds'
+
+        Fractional hours are allowed, but may not be exact - they are limited to the granularity of the biological timestep.
+        For example, a biological step of 900s (15 mins) would support 1.25 hours, but not 1.1 hours. To achieve that,
+        the biological timestep would have to be adjusted, at the cost of increased simulation cost.
+
+        This value can be overwritten by subsequent calls to ``run_for_N_hours()`` and the simulation can end
+        before N steps if ``stop_at_biomass_percent()`` is called.
+
+         :param time_h: Total time in hours to simulate.
+         :param biostep_s: Adjust biological timestep to new value (s). Optional.
+
+         See Also
+         --------
+         Explanation of NUFEB timestepping
+         https://nufeb.readthedocs.io/en/master/run_style_nufeb.html
+         """
+        if biostep_s is not None:
+            self.set_biological_timestep_size_s(biostep_s)
+        nsteps = int((time_h*60*60)/self.biostep)
+        self.run_for_N_steps(nsteps)
 
     def _generate_inputscript(self):
         isb = InputScriptBuilder()
@@ -416,14 +478,16 @@ class NufebProject:
         if(self.write_csv):
             isb.enable_csv_output(self.track_abs, self.stop_condition=="percent biomass")
 
+        valid_stops = ["percent biomass", "runtime"]
+        if self.stop_condition not in valid_stops:
+            raise ValueError(f'Unknown stop condition "{self.stop_condition}" valid conditions: {" ".join(valid_stops)}')
+
         if self.stop_condition=="percent biomass":
-            isb.build_run(365*24*60*60)
+            self.run_for_N_hours(365*24)
             isb.track_percent_biomass(self.sim_box)
             isb.end_on_biomass(self.biomass_percent)
-        elif self.stop_condition=="runtime":
-            isb.build_run(self.runtime)
-        else:
-            raise ValueError(f'Unknown stop condition: {self.stop_condition}')
+
+        isb.build_run(self.run_steps, self.biostep)
 
         if self.max_biofilm_height is not None:
             isb.limit_biofilm_height(self.max_biofilm_height)

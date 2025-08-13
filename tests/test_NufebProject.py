@@ -1,52 +1,116 @@
 import pytest
 from nufebmgr.NufebProject import NufebProject
+from typing import Any
+
+@pytest.fixture
+def prj() -> "NufebProject":
+    """
+    Fixture that returns a fresh instance of NufebProject for each test.
+    """
+    return NufebProject()
 
 def test_initialization():
     project = NufebProject()
     assert project is not None
 
-def test_error_on_assign_taxa_not_all_taxa_have_entries():
-    prj = NufebProject()
-    with pytest.raises(ValueError) as excinfo:
-        prj.add_taxon_by_jsonfile("data/example_het_taxa.json")
+def test_error_on_assign_taxa_not_all_taxa_have_entries_or_compositions():
+    def setup_local(taxa_filename:str) -> NufebProject:
+        prj = NufebProject()
+        prj.add_taxon_by_jsonfile(taxa_filename)
         prj.layout_uniform(nbugs=20)
         prj.set_composition({'anammox_two_pathway': '33.333',
                              'denitrifier': '33.33',
                              'imperfect_denitrifier_no': '33.33'})
         prj.distribute_spatially_even()
-        prj._assign_taxa()
+        return prj
+
+    with pytest.raises(ValueError) as excinfo:
+        setup_local("data/example_het_taxa.json")._assign_taxa()
     assert f'Setting composition with unknown taxon: anammox_two_pathway, denitrifier, imperfect_denitrifier_no' in str(excinfo.value)
 
-    prj = NufebProject()
     try:
-        prj.add_taxon_by_jsonfile("data/example_nitrogen_anaerobic_taxa.json")
-        prj.layout_uniform(nbugs=20)
-        prj.set_composition({'anammox_two_pathway': '33.333',
-                             'denitrifier': '33.33',
-                             'imperfect_denitrifier_no': '33.33'})
-        prj.distribute_spatially_even()
-        prj._assign_taxa()
+        setup_local("data/example_nitrogen_anaerobic_taxa.json")._assign_taxa()
     except Exception as e:
         pytest.fail(f'Unexpected exception {e}')
 
-    prj = NufebProject()
     with pytest.raises(ValueError) as excinfo:
-        prj.add_taxon_by_jsonfile("data/example_nitrogen_anaerobic_taxa_missing_amx.json")
-        prj.layout_uniform(nbugs=20)
-        prj.set_composition({'anammox_two_pathway': '33.333',
-                             'denitrifier': '33.33',
-                             'imperfect_denitrifier_no': '33.33'})
-        prj.distribute_spatially_even()
-        prj._assign_taxa()
+        setup_local("data/example_nitrogen_anaerobic_extra_het_taxa.json")._assign_taxa()
+    assert f'Composition not set for taxon taxon (use 0 if not initially present): small_heterotroph' in str(excinfo.value)
+
+    with pytest.raises(ValueError) as excinfo:
+        setup_local("data/example_nitrogen_anaerobic_taxa_missing_amx.json")._assign_taxa()
     assert f'Setting composition with unknown taxon: anammox_two_pathway' in str(excinfo.value)
 
-    prj = NufebProject()
     with pytest.raises(ValueError) as excinfo:
-        prj.add_taxon_by_jsonfile("data/example_nitrogen_anaerobic_taxa_missing_amx_extra_het.json")
-        prj.layout_uniform(nbugs=20)
-        prj.set_composition({'anammox_two_pathway': '33.333',
-                             'denitrifier': '33.33',
-                             'imperfect_denitrifier_no': '33.33'})
-        prj.distribute_spatially_even()
-        prj._assign_taxa()
+        setup_local("data/example_nitrogen_anaerobic_taxa_missing_amx_extra_het.json")._assign_taxa()
     assert f'Setting composition with unknown taxon: anammox_two_pathway' in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    "setter_name, getter_name, input_value, expected_value",
+    [
+        ("run_for_N_steps", "run_steps", 42, 42),
+        ("use_seed", "seed", 19, 19),
+        ("use_seed", "seed", None, 1701),
+        ("set_biological_timestep_size_s", "biostep", 1100, 1100),
+    ]
+)
+def test_API_contract(prj:NufebProject, setter_name: str, getter_name:str, input_value:Any, expected_value:Any) -> None:
+    """
+    Test the public API contract for NufebProject setter/getter pairs.
+
+    This test verifies that:
+      - The setter correctly updates the internal state - apart from side effects
+      - The corresponding getter returns the expected value.
+      - Default parameter behavior (if applicable) works as intended.
+
+    Parameters
+    ----------
+    prj : NufebProject
+        Instance of NufebProject provided by the fixture.
+    setter_name : str
+        Name of the setter method to call on the instance.
+    getter_name : str
+        Name of the getter attribute or method to check the value.
+    input_value : Any
+        Value to pass to the setter. Can be any type compatible with the setter.
+    expected_value : Any
+        The value expected to be returned by the getter after calling the setter.
+
+    Notes
+    -----
+      - Side effects are not tested here and should be covered in
+        separate, they will be tested in dedicated explicit tests
+      - The goal here is to avoid boilerplate code.
+      - We are testing simple getter/setters as this is part of the Public facing API and we want to know if *anything*
+      about that breaks. In the future, 'simple' getter/setters may no longer be such.
+    """
+    #prj = NufebProject()
+    setter = getattr(prj, setter_name)
+    if input_value is None:
+        setter()
+    else:
+        setter(input_value)
+    getter_value = getattr(prj, getter_name)
+
+    assert getter_value == expected_value
+
+@pytest.mark.parametrize(
+    "hours, biostep, expected",
+    [
+        (2, 900, 8),
+        (3, None, 12),
+        (2, 1800, 4),
+        (2.5, 900, 10),
+        (1.25, 900, 5),
+        (1.24, 900, 4),
+        (1.26, 900, 5),
+        (1.1, 1, int(60*60*1.1)),
+    ]
+)
+def test_run_for_N_hours(prj:NufebProject, hours: float, biostep:int, expected:int) -> None:
+    if biostep is None:
+        prj.run_for_N_hours(hours)
+    else:
+        prj.run_for_N_hours(hours,biostep)
+    assert prj.run_steps == expected
