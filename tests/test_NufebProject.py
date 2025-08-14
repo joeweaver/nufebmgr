@@ -1,6 +1,10 @@
 import pytest
 from nufebmgr.NufebProject import NufebProject
 from typing import Any
+from pathlib import Path
+
+HERE = Path(__file__).parent  # directory containing the test file
+DATA_DIR = HERE / "data"
 
 @pytest.fixture
 def prj() -> "NufebProject":
@@ -25,24 +29,24 @@ def test_error_on_assign_taxa_not_all_taxa_have_entries_or_compositions():
         return prj
 
     with pytest.raises(ValueError) as excinfo:
-        setup_local("data/example_het_taxa.json")._assign_taxa()
+        setup_local(DATA_DIR / "example_het_taxa.json")._assign_taxa()
     assert f'Setting composition with unknown taxon: anammox_two_pathway, denitrifier, imperfect_denitrifier_no' in str(excinfo.value)
 
     try:
-        setup_local("data/example_nitrogen_anaerobic_taxa.json")._assign_taxa()
+        setup_local(DATA_DIR / "example_nitrogen_anaerobic_taxa.json")._assign_taxa()
     except Exception as e:
         pytest.fail(f'Unexpected exception {e}')
 
     with pytest.raises(ValueError) as excinfo:
-        setup_local("data/example_nitrogen_anaerobic_extra_het_taxa.json")._assign_taxa()
+        setup_local(DATA_DIR / "example_nitrogen_anaerobic_extra_het_taxa.json")._assign_taxa()
     assert f'Composition not set for taxon taxon (use 0 if not initially present): small_heterotroph' in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
-        setup_local("data/example_nitrogen_anaerobic_taxa_missing_amx.json")._assign_taxa()
+        setup_local(DATA_DIR / "example_nitrogen_anaerobic_taxa_missing_amx.json")._assign_taxa()
     assert f'Setting composition with unknown taxon: anammox_two_pathway' in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
-        setup_local("data/example_nitrogen_anaerobic_taxa_missing_amx_extra_het.json")._assign_taxa()
+        setup_local(DATA_DIR / "example_nitrogen_anaerobic_taxa_missing_amx_extra_het.json")._assign_taxa()
     assert f'Setting composition with unknown taxon: anammox_two_pathway' in str(excinfo.value)
 
 

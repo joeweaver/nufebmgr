@@ -1,0 +1,10 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: pytest-full
+        name: Run full pytest suite
+        entry: pytest
+        language: system
+        types: [python]
+        args: ["tests/", "--disable-warnings=false", "--verbose"]

@@ -6,33 +6,37 @@ from pyarrow import fs
 import numpy as np
 import numpy.testing as npt
 import polars as pl
+from pathlib import Path
+
+HERE = Path(__file__).parent  # directory containing the test file
+DATA_DIR = HERE / "data"
 
 def test_num_timesteps():
 
-    with DumpFile("data/dump_1.h5") as dump:
+    with DumpFile(DATA_DIR / "dump_1.h5") as dump:
         assert 20 == dump.num_timesteps()
 
-    with DumpFile("data/dump_2.h5") as dump:
+    with DumpFile(DATA_DIR / "dump_2.h5") as dump:
         assert 25 == dump.num_timesteps()
 
 def test_timesteps():
-    with DumpFile("data/dump_1.h5") as dump:
+    with DumpFile(DATA_DIR / "dump_1.h5") as dump:
         assert list(range(0,20)) == dump.timesteps()
 
-    with DumpFile("data/dump_2.h5") as dump:
+    with DumpFile(DATA_DIR / "dump_2.h5") as dump:
         assert list(range(0, 25)) == dump.timesteps()
 
 def test_population_abs():
-    expected = pl.read_csv("data/expected_population_abs_dump_1.csv")
-    with DumpFile("data/dump_1.h5") as dump:
+    expected = pl.read_csv(DATA_DIR / "expected_population_abs_dump_1.csv")
+    with DumpFile(DATA_DIR / "dump_1.h5") as dump:
         result = dump.population_abs()
         assert expected.equals(result)
 
 def test_births():
-    expected = pl.read_csv("data/expected_births_dump_1.csv")
+    expected = pl.read_csv(DATA_DIR / "expected_births_dump_1.csv")
     expected_just_taxa1 = expected.filter(pl.col("type").is_in([1]))
     expected_just_taxa23 = expected.filter(pl.col("type").is_in([2,3]))
-    with DumpFile("data/dump_1.h5") as dump:
+    with DumpFile(DATA_DIR / "dump_1.h5") as dump:
         result = dump.births()
         assert expected.equals(result['all'])
 
@@ -50,11 +54,11 @@ def test_births():
         assert list(result.keys()) == ['taxa1','taxa23']
 
 def test_deaths():
-    expected = pl.read_csv("data/expected_deaths_t6ss_1.csv")
+    expected = pl.read_csv(DATA_DIR / "expected_deaths_t6ss_1.csv")
     expected_just_taxa4 = expected.filter(pl.col("type").is_in([4]))
     expected_just_taxa5 = expected.filter(pl.col("type").is_in([5]))
     #TODO set upa  system which has deaths for more than 1 type and use that for test data
-    with DumpFile("data/t6ss_1.h5") as dump:
+    with DumpFile(DATA_DIR / "t6ss_1.h5") as dump:
         result = dump.deaths()
         assert expected.equals(result['all'])
 
@@ -73,8 +77,8 @@ def test_deaths():
 
 def test_births_at_time():
     expected_blank = np.array([], dtype=int)
-    expected_births5_dump1 = np.loadtxt("data/birth5_dump1.txt", dtype=int)
-    with DumpFile("data/dump_1.h5") as dump:
+    expected_births5_dump1 = np.loadtxt(DATA_DIR / "birth5_dump1.txt", dtype=int)
+    with DumpFile(DATA_DIR / "dump_1.h5") as dump:
         result = dump.births_at_time(2)
         npt.assert_equal(expected_blank, result)
 
@@ -83,8 +87,8 @@ def test_births_at_time():
 
 def test_deaths_at_time():
     expected_blank = np.array([], dtype=int)
-    expected_births5_dump1 = np.loadtxt("data/birth5_dump1.txt", dtype=int)
-    with DumpFile("data/t6ss_1.h5") as dump:
+    expected_births5_dump1 = np.loadtxt(DATA_DIR / "birth5_dump1.txt", dtype=int)
+    with DumpFile(DATA_DIR / "t6ss_1.h5") as dump:
         result = dump.deaths_at_time(2)
         npt.assert_equal(expected_blank, result)
 

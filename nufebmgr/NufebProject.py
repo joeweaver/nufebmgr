@@ -11,7 +11,9 @@ from .InputScriptBuilder import InputScriptBuilder
 from datetime import datetime
 from .poisson import PoissonDisc
 from .TaxaAssigmentManager import TaxaAssignmentManager
-from .BugPos import BugPos#
+from .BugPos import BugPos
+from .ChemDumpSpec import ChemDumpSpec
+from .BugDumpSpec import BugDumpSpec
 
 class NufebProject:
     runsteps: int
@@ -171,6 +173,15 @@ class NufebProject:
         self.forced_substrate_grid_size=size
     def disable_hdf5_output(self):
         self.write_hdf5 = False
+
+    def custom_hdf5_output(self, dumpname:str ="dump.h5", dumpdir:str ="hdf5", nsteps: int =1,
+                           dump_bugs: BugDumpSpec=BugDumpSpec(), dump_chems: ChemDumpSpec=ChemDumpSpec()):
+        self.write_hdf5 = True
+        # multiple hdf5
+        # custom names (checkfor clobber)
+        # custom dirs (checkfor clober)
+        # based on bugdump and chemdump
+
 
     def disable_vtk_output(self):
         self.write_vtk = False

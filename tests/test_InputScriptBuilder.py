@@ -36,6 +36,7 @@ def test_grid_cell_size_picker():
         grid_size = isb._pick_grid_size(s)
     assert f'No valid grid size (option 1, 1.5, 2 microns) for a simulation of dimensions {s.dim_string()}' in str(excinfo.value)
 
+
 def _test_a_grid(expected):
     isb = InputScriptBuilder()
     s = SimulationBox(xlen=expected*10, ylen=expected*9, zlen=expected*4)
