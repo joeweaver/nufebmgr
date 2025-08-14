@@ -175,10 +175,43 @@ class NufebProject:
         self.forced_substrate_grid_size=size
 
     def clear_hdf5_output(self):
+        """
+        Clear all currently scheduled HDF5 output specifications.
+
+        This removes all entries in `self.hdf5_dump_specs`, effectively resetting
+        the set of HDF5 dumps that will be generated during the simulation.
+        """
         self.hdf5_dump_specs = []
 
     def add_custom_hdf5_output(self, dumpname:str ="dump.h5", dumpdir:str ="hdf5", nsteps: int =1,
                            dump_bugs: BugDumpSpec=BugDumpSpec(), dump_chems: ChemDumpSpec=ChemDumpSpec()):
+        """
+        Schedule a new custom HDF5 output for the simulation.
+
+        Adds a new HDF5 dump specification with the given parameters. Raises a
+        ValueError if a dump with the same filename in the same directory has
+        already been scheduled.
+
+        Parameters
+        ----------
+        dumpname : str, optional
+           The name of the HDF5 file to create (default "dump.h5").
+        dumpdir : str, optional
+           Directory where the HDF5 file will be written (default "hdf5").
+        nsteps : int, optional
+           Number of simulation steps between consecutive dumps (default 1).
+        dump_bugs : BugDumpSpec, optional
+           Specification of which bug-related data to include in the dump
+           (default is a default BugDumpSpec instance).
+        dump_chems : ChemDumpSpec, optional
+           Specification of which chemical data to include in the dump
+           (default is a default ChemDumpSpec instance).
+
+        Raises
+        ------
+        ValueError
+           If a dump with the same `dumpname` in the same `dumpdir` already exists.
+        """
         # check for clobbers. This is straightforward but O(n).
         # If we run into performance issues (shouldn't). Consider going to a custom collection class which checks
         # when trying to append.
