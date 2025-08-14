@@ -67,10 +67,7 @@ class BugDumpSpec:
         Return the list of bug-related HDF5 variable names to dump.
 
         The exact list depends on the `outspec_h5` value provided during
-        initialisation:
-          - `"all"`: All standard variables
-          - `"location"`: Position-related variables only
-          - `"custom"`: Custom set provided in `self.custom_h5`
+        initialisation.
 
         Returns
         -------
