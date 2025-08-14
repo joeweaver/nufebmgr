@@ -25,7 +25,7 @@ def configure_project():
 
         prj.set_track_abs()
         prj.enable_thermo_output(timestep=1)
-        prj.disable_hdf5_output()
+        prj.clear_hdf5_output()
 
         atom_in, inputscript = prj.generate_case()
         return atom_in, inputscript

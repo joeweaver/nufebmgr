@@ -25,7 +25,7 @@ def configure_project():
 
         prj.set_track_abs()
         prj.enable_thermo_output(timestep=1)
-        prj.disable_hdf5_output()
+        prj.clear_hdf5_output()
         prj.add_lysis_group_by_json('vuln_intoxicated',{'name':'vuln_intoxicated','releases':'sub','rate':'2e-3','percent':'0.2'})
 
         prj.arm_t6ss(taxon="attacker",effector="toxin_a",harpoon_len=1.3e-6,cooldown=100)

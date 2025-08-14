@@ -11,6 +11,7 @@
 * inferring substrates based on metabolisms must now be explicitly enabled (``enable_inferring_substrates``)
   * inferences are not guaranteed to make sensible guesses on initial/boundary concentrations or on diffusion parameters, it is on the user to check those
 * ``set_runtime`` was ambiguously named (number of steps, total simulation time?) and has been renamed to ``run_for_N_steps``
+* Multiple HDF5 outputs available, so ``disable_hdf5_output`` is now named ``clear_hdf5_output`` 
 
 ## New functions
 

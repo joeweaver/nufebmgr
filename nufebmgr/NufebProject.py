@@ -174,7 +174,7 @@ class NufebProject:
     def force_substrate_grid_size(self,size):
         self.forced_substrate_grid_size=size
 
-    def disable_hdf5_output(self):
+    def clear_hdf5_output(self):
         self.hdf5_dump_specs = []
 
     def add_custom_hdf5_output(self, dumpname:str ="dump.h5", dumpdir:str ="hdf5", nsteps: int =1,

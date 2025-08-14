@@ -125,7 +125,7 @@ def test_run_for_N_hours(prj:NufebProject, hours: float, biostep:int, expected:i
 def test_default_single_custom_hdf5(prj:NufebProject,):
     bds = BugDumpSpec()
     cds = ChemDumpSpec()
-    prj.disable_hdf5_output()
+    prj.clear_hdf5_output()
     assert prj.hdf5_dump_specs == []
 
     prj.add_custom_hdf5_output()
@@ -137,7 +137,7 @@ def test_default_single_custom_hdf5(prj:NufebProject,):
 def test_single_custom_hdf5(prj: NufebProject, ):
     bds = BugDumpSpec()
     cds = ChemDumpSpec()
-    prj.disable_hdf5_output()
+    prj.clear_hdf5_output()
     assert prj.hdf5_dump_specs == []
 
     prj.add_custom_hdf5_output(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=10, dump_bugs=BugDumpSpec("location"),
@@ -150,7 +150,7 @@ def test_single_custom_hdf5(prj: NufebProject, ):
 def test_multiple_custom_hdf5(prj: NufebProject, ):
     bds = BugDumpSpec()
     cds = ChemDumpSpec()
-    prj.disable_hdf5_output()
+    prj.clear_hdf5_output()
     assert prj.hdf5_dump_specs == []
 
     prj.add_custom_hdf5_output(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=1, dump_bugs=BugDumpSpec("location"),
@@ -168,7 +168,7 @@ def test_multiple_custom_hdf5(prj: NufebProject, ):
 def test_multiple_custom_no_file_clobber_hdf5(prj: NufebProject, ):
     bds = BugDumpSpec()
     cds = ChemDumpSpec()
-    prj.disable_hdf5_output()
+    prj.clear_hdf5_output()
     assert prj.hdf5_dump_specs == []
 
     prj.add_custom_hdf5_output(dumpname="custom_dump.h5", dumpdir="hdf5", nsteps=1, dump_bugs=BugDumpSpec("location"),
