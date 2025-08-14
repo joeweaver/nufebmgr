@@ -4,17 +4,22 @@ from nufebmgr.BugDumpSpec import BugDumpSpec
 def test_default_hdf5_vars():
     bds = BugDumpSpec()
     to_dump = bds.hdf5_vars()
-    assert to_dump == ['id', 'type', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'fx', 'fy', 'fz']
+    assert to_dump == ['id', 'type', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'fx', 'fy', 'fz', 'radius']
 
 def test_all_hdf5_vars():
     bds = BugDumpSpec("all")
     to_dump = bds.hdf5_vars()
-    assert to_dump == ['id', 'type', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'fx', 'fy', 'fz']
+    assert to_dump == ['id', 'type', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'fx', 'fy', 'fz', 'radius']
 
 def test_location_hdf5_vars():
     bds = BugDumpSpec("location")
     to_dump = bds.hdf5_vars()
     assert to_dump == ['id', 'type', 'x', 'y', 'z']
+
+def test_location_hdf5_vars():
+    bds = BugDumpSpec("location_radius")
+    to_dump = bds.hdf5_vars()
+    assert to_dump == ['id', 'type', 'x', 'y', 'z', 'radius']
 
 def test_custom_hdf5_vars():
     bds = BugDumpSpec("custom")

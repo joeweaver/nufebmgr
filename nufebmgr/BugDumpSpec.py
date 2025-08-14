@@ -12,6 +12,7 @@ class BugDumpSpec:
         Specification of which variables to include in HDF5 output. Must be one of:
         - ``"all"``: Include all available variables (default).
         - ``"location"``: Include only ID, type, and spatial coordinates.
+        - ``"location_radius"``: Include radius alongside ID, type, and spatial coordinates.
         - ``"custom"``: Include only the variables listed in ``custom_h5``.
     custom_h5 : list of str, optional
         List of variables to include when ``outspec_h5`` is set to ``"custom"``.
@@ -50,7 +51,7 @@ class BugDumpSpec:
     """
 
 
-    _VALID_H5=["all", "location", "custom"]
+    _VALID_H5=["all", "location", "location_radius", "custom"]
 
 
     def __init__(self, outspec_h5: str ="all", custom_h5: list[str] | None = None):
@@ -78,9 +79,11 @@ class BugDumpSpec:
         """
 
         if self.outspec_h5 == "all":
-            return ['id', 'type', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'fx', 'fy', 'fz']
+            return ['id', 'type', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'fx', 'fy', 'fz', 'radius']
         if self.outspec_h5 == "location":
             return ['id', 'type', 'x', 'y', 'z']
+        if self.outspec_h5 == "location_radius":
+            return ['id', 'type', 'x', 'y', 'z', 'radius']
         if self.outspec_h5 == "custom":
             return self.custom_h5
         else:
