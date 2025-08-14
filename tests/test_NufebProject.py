@@ -2,6 +2,9 @@ import pytest
 from nufebmgr.NufebProject import NufebProject
 from typing import Any
 from pathlib import Path
+from nufebmgr.ChemDumpSpec import ChemDumpSpec
+from nufebmgr.BugDumpSpec import BugDumpSpec
+from nufebmgr.HDF5DumpSpec import HDF5DumpSpec
 
 HERE = Path(__file__).parent  # directory containing the test file
 DATA_DIR = HERE / "data"
@@ -118,3 +121,69 @@ def test_run_for_N_hours(prj:NufebProject, hours: float, biostep:int, expected:i
     else:
         prj.run_for_N_hours(hours,biostep)
     assert prj.run_steps == expected
+
+def test_default_single_custom_hdf5(prj:NufebProject,):
+    bds = BugDumpSpec()
+    cds = ChemDumpSpec()
+    prj.disable_hdf5_output()
+    assert prj.hdf5_dump_specs == []
+
+    prj.add_custom_hdf5_output()
+    assert len(prj.hdf5_dump_specs) == 1
+    ho = prj.hdf5_dump_specs[0]
+    expected = HDF5DumpSpec(dumpname ="dump.h5", dumpdir ="hdf5", nsteps =1, dump_bugs =BugDumpSpec(), dump_chems =ChemDumpSpec())
+    assert ho == expected
+
+def test_single_custom_hdf5(prj: NufebProject, ):
+    bds = BugDumpSpec()
+    cds = ChemDumpSpec()
+    prj.disable_hdf5_output()
+    assert prj.hdf5_dump_specs == []
+
+    prj.add_custom_hdf5_output(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=10, dump_bugs=BugDumpSpec("location"),
+                            dump_chems=ChemDumpSpec("reac"))
+    assert len(prj.hdf5_dump_specs) == 1
+    expected = HDF5DumpSpec(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=10, dump_bugs=BugDumpSpec("location"),
+                            dump_chems=ChemDumpSpec("reac"))
+    assert prj.hdf5_dump_specs[0] == expected
+
+def test_multiple_custom_hdf5(prj: NufebProject, ):
+    bds = BugDumpSpec()
+    cds = ChemDumpSpec()
+    prj.disable_hdf5_output()
+    assert prj.hdf5_dump_specs == []
+
+    prj.add_custom_hdf5_output(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=1, dump_bugs=BugDumpSpec("location"),
+                            dump_chems=ChemDumpSpec("reac"))
+    prj.add_custom_hdf5_output(dumpname="custom_dumpb.h5", dumpdir="altb_hdf5", nsteps=1, dump_bugs=BugDumpSpec("all"),
+                            dump_chems=ChemDumpSpec("conc"))
+    assert len(prj.hdf5_dump_specs) == 2
+    expected0 = HDF5DumpSpec(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=1, dump_bugs=BugDumpSpec("location"),
+                            dump_chems=ChemDumpSpec("reac"))
+    expected1 = HDF5DumpSpec(dumpname="custom_dumpb.h5", dumpdir="altb_hdf5", nsteps=1, dump_bugs=BugDumpSpec("all"),
+                            dump_chems=ChemDumpSpec("conc"))
+    assert prj.hdf5_dump_specs[0] == expected0
+    assert prj.hdf5_dump_specs[1] == expected1
+
+def test_multiple_custom_no_file_clobber_hdf5(prj: NufebProject, ):
+    bds = BugDumpSpec()
+    cds = ChemDumpSpec()
+    prj.disable_hdf5_output()
+    assert prj.hdf5_dump_specs == []
+
+    prj.add_custom_hdf5_output(dumpname="custom_dump.h5", dumpdir="hdf5", nsteps=1, dump_bugs=BugDumpSpec("location"),
+                            dump_chems=ChemDumpSpec("reac"))
+
+    with pytest.raises(ValueError) as excinfo:
+        prj.add_custom_hdf5_output(dumpname="custom_dump.h5", dumpdir="hdf5", nsteps=1,
+                                   dump_bugs=BugDumpSpec("all"),
+                                   dump_chems=ChemDumpSpec("conc"))
+    assert f'Specified multiple HDF5 dump files named custom_dump.h5 in directory hdf5' in str(excinfo.value)
+
+    # should not raise an error if different directories
+    try:
+        prj.add_custom_hdf5_output(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=1,
+                                   dump_bugs=BugDumpSpec("all"),
+                                   dump_chems=ChemDumpSpec("conc"))
+    except Exception as e:
+        pytest.fail(f'Unexpected exception {e}')

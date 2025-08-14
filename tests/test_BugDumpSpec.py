@@ -49,3 +49,13 @@ def test_unknown_spec_hdf5_vars():
         bds = BugDumpSpec("banana")
         to_dump = bds.hdf5_vars()
     assert f'Unknown output specification "banana". Valid values are: {", ".join(valids)}' in str(excinfo.value)
+
+
+def test_eq():
+    bds1 = BugDumpSpec("custom", ['type', 'id', 'banana'])
+    bds2 = BugDumpSpec("custom", ['type', 'id', 'banana'])
+    bds3 = BugDumpSpec("custom", ['type', 'id', 'orange'])
+
+    assert bds1 == bds2
+    assert bds1 != bds3
+    assert (bds1 == "not BugDumpSpec") is False

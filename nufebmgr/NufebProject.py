@@ -14,6 +14,7 @@ from .TaxaAssigmentManager import TaxaAssignmentManager
 from .BugPos import BugPos
 from .ChemDumpSpec import ChemDumpSpec
 from .BugDumpSpec import BugDumpSpec
+from .HDF5DumpSpec import HDF5DumpSpec
 
 class NufebProject:
     runsteps: int
@@ -152,7 +153,8 @@ class NufebProject:
         self.biomass_percent = None
         self.write_csv = False
         self.max_biofilm_height = None
-        self.write_hdf5 = True
+        self.hdf5_dump_specs = [HDF5DumpSpec(dumpname ="dump.h5", dumpdir ="hdf5", nsteps =1,
+                           dump_bugs =BugDumpSpec(), dump_chems =ChemDumpSpec())]
         self.write_vtk = True
         self.forced_substrate_grid_size=None
         self.infer_substrates=False
@@ -171,16 +173,23 @@ class NufebProject:
 
     def force_substrate_grid_size(self,size):
         self.forced_substrate_grid_size=size
-    def disable_hdf5_output(self):
-        self.write_hdf5 = False
 
-    def custom_hdf5_output(self, dumpname:str ="dump.h5", dumpdir:str ="hdf5", nsteps: int =1,
+    def disable_hdf5_output(self):
+        self.hdf5_dump_specs = []
+
+    def add_custom_hdf5_output(self, dumpname:str ="dump.h5", dumpdir:str ="hdf5", nsteps: int =1,
                            dump_bugs: BugDumpSpec=BugDumpSpec(), dump_chems: ChemDumpSpec=ChemDumpSpec()):
-        self.write_hdf5 = True
-        # multiple hdf5
-        # custom names (checkfor clobber)
-        # custom dirs (checkfor clober)
-        # based on bugdump and chemdump
+        # check for clobbers. This is straightforward but O(n).
+        # If we run into performance issues (shouldn't). Consider going to a custom collection class which checks
+        # when trying to append.
+        for hds in self.hdf5_dump_specs:
+            if (hds.dumpdir == dumpdir) and (hds.dumpname == dumpname):
+                raise ValueError(f'Specified multiple HDF5 dump files named {dumpname} in directory {dumpdir}')
+
+        self.hdf5_dump_specs.append(HDF5DumpSpec(dumpname, dumpdir, nsteps, dump_bugs, dump_chems))
+
+
+
 
 
     def disable_vtk_output(self):
@@ -480,8 +489,7 @@ class NufebProject:
         if(self.thermo_output):
             isb.add_thermo_output(self.track_abs, self.thermo_timestep)
 
-        if(self.write_hdf5):
-            isb.add_hdf5_output()
+        isb.add_hdf5_output(self.hdf5_dump_specs)
 
         if (self.write_vtk):
             isb.add_vtk_output()

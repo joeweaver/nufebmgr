@@ -84,3 +84,8 @@ class ChemDumpSpec:
             return self.custom_h5
         else:
             raise ValueError(f'Unknown output specification {self.outspec_h5}. Valid values are: {", ".join(ChemDumpSpec._VALID_H5)}')
+
+    def __eq__(self, other):
+        if type(self) is not type(other):
+            return NotImplemented
+        return self.__dict__ == other.__dict__

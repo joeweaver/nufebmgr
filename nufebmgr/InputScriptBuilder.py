@@ -4,6 +4,7 @@ from .Substrate import Substrate
 from typing import Any, Dict, List
 from .default_inputscript import DEFAULT_INPUTSCRIPT
 from .inputscript_template import TEMPLATE_STR
+from .HDF5DumpSpec import HDF5DumpSpec
 import copy
 
 class InputScriptBuilder:
@@ -354,7 +355,7 @@ class InputScriptBuilder:
             else:
                 raise KeyError(f"Taxon {k} has unrecognized division strategy: {active_taxa[k]['division_strategy']['name'] }")
 
-    def add_hdf5_output(self):
+    def add_hdf5_output(self, hdf5_dump_specs: List[HDF5DumpSpec]):
         self.config_vals['computation_output'][0]['hdf5_output'] = [
             {'name': 'HDF5 output, efficient binary format for storing many atom properties'},
             {'name': 'requires NUFEB built with HDF5 option'},
