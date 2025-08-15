@@ -258,6 +258,7 @@ def test_assign_groups():
     # adding after the fact intentionally here to exercise order-independence
     prj.add_lysis_group_by_json('vuln_intoxicated',
                                 {'name': 'vuln_intoxicated', 'releases': 'sub', 'rate': '2e-3', 'percent': '0.2'})
+    prj.set_track_abs()
     try:
         prj.generate_case()
     except Exception as e:

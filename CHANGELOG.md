@@ -14,6 +14,8 @@
 * Multiple HDF5 outputs available, so ``disable_hdf5_output`` is now named ``clear_hdf5_output`` 
 * Now required to explicitly map taxa to group IDs using 1set_taxa_groups``
   * See issue at https://github.com/joeweaver/nufebmgr/issues/4
+* Possibly breaking. Bugs now init to 50-90% of their maximum diameter (uniform distribution)
+
 ## New functions
 
 * Elastic boundary layers *x* microns above the surface of the biofilm are now possible for ``bioreactor`` boundary conditions
