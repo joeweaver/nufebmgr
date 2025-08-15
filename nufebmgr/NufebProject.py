@@ -444,6 +444,12 @@ class NufebProject:
          # Add the atoms list to the config values
          config_values['atoms'] = df2.reset_index().to_dict(orient='records')
 
+         for item in config_values['atoms']:
+             max_diam_i = item['division_strategy']['diameter']
+             diam_i = item['diameter']
+             # Clamp diam_i to 50–90% of max_diam_i
+             item['diameter'] = np.random.uniform(0.5 * max_diam_i, 0.9 * max_diam_i)
+             item['outer_diameter']=item['diameter']
 
          template_str =\
  """NUFEB Simulation
@@ -527,7 +533,7 @@ class NufebProject:
 
     def _generate_inputscript(self):
         isb = InputScriptBuilder()
-
+        isb.build_bug_groups(self.group_assignments, self.active_taxa, self.lysis_groups)
         if self.infer_substrates:
             self._infer_substrates()
 
@@ -537,7 +543,7 @@ class NufebProject:
                 raise ValueError("An elastic boundary layer was set for a non-bioreactor scenario. Only bioreactor scenarios support elastic boundary layers at this time")
             isb.build_post_physical(self.elastic_bl)
         isb.build_diffusion(self.substrates)
-        isb.build_bug_groups(self.group_assignments, self.active_taxa, self.lysis_groups)
+
         isb.clear_growth_strategy()
         isb.build_growth_strategy(self.active_taxa)
         isb.clear_division()
