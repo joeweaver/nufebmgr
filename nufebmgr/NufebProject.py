@@ -360,11 +360,13 @@ class NufebProject:
             all_compositions = [float(value) for value in self.composition.values()]
             total = sum(all_compositions)
             rel_abs = {}
+            taxa = []
+            probs = []
             for taxon,ab in self.composition.items():
                 rv = float(ab)/total
-                rel_abs[taxon] = rv
-            taxa = list(rel_abs.keys())
-            probs = list(rel_abs.values())
+                taxa.append(taxon)
+                probs.append(rv)
+
             population = np.random.choice(taxa, size=self._n_members(), p=probs)
             for bug_loc, taxon in zip(self.bug_locs, population):
                 bug_loc.taxon_name = taxon
