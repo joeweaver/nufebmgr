@@ -2,6 +2,9 @@ import pytest
 from nufebmgr.InputScriptBuilder import InputScriptBuilder
 from nufebmgr.SimulationBox import SimulationBox
 from nufebmgr.Substrate import Substrate
+from nufebmgr.BugDumpSpec import BugDumpSpec
+from nufebmgr.ChemDumpSpec import ChemDumpSpec
+from nufebmgr.HDF5DumpSpec import HDF5DumpSpec
 
 def test_grid_cell_size_picker():
     isb = InputScriptBuilder()
@@ -183,5 +186,72 @@ def test_build_postphysical():
                      'comment': ''}
                 ]
                 }
-
     assert expected == new_data
+
+def test_empty_hdf5():
+    isb = InputScriptBuilder()
+    # should start with empty values
+    assert isb.config_vals['computation_output'][0]['hdf5_output'] == []
+
+
+    dump_A = HDF5DumpSpec(dumpname="custom_dump.h5", dumpdir="hdf5", nsteps=4, dump_bugs=BugDumpSpec("all").hdf5_vars(),
+                          dump_chems=ChemDumpSpec("conc").hdf5_vars())
+    isb.add_hdf5_output([dump_A])
+
+    isb.add_hdf5_output([])
+    assert isb.config_vals['computation_output'][0]['hdf5_output'] == []
+
+def test_single_hdf5():
+    isb = InputScriptBuilder()
+
+    # should start with empty values
+    assert isb.config_vals['computation_output'][0]['hdf5_output'] == []
+
+    expected_A = [
+        {'linetype': 'subsection', 'title': 'HDF5 output, efficient binary format, for storing many atom properties'},
+        {'linetype': 'comment', 'title': 'NOTE: requires NUFEB built with HDF5 option'},
+        {'linetype': 'subsection', 'title': 'Create directory(s) for dump'},
+        {'linetype': 'command', 'name': 'shell', 'command': 'mkdir hdf5'},
+        {'linetype': 'subsection', 'title': 'Dump specifications'},
+        {'linetype': 'command', 'name': 'dump', 'dumpname': 'du_hdf5_0', 'group': 'all', 'format': 'nufeb/hdf5',
+         'every_n': '4',
+         'loc': 'hdf5/custom_dump.h5', 'dumpvars': 'id type x y z vx vy vz fx fy fz radius conc'},
+    ]
+
+
+    dump_A = HDF5DumpSpec(dumpname="custom_dump.h5", dumpdir="hdf5", nsteps=4, dump_bugs=BugDumpSpec("all").hdf5_vars(),
+                          dump_chems=ChemDumpSpec("conc").hdf5_vars())
+    isb.add_hdf5_output([dump_A])
+    assert isb.config_vals['computation_output'][0]['hdf5_output'] == expected_A
+
+
+def test_multi_hdf5():
+    isb = InputScriptBuilder()
+
+    # should start with empty values
+    assert isb.config_vals['computation_output'][0]['hdf5_output'] == []
+
+    expected_ABC = [
+        {'linetype': 'subsection', 'title': 'HDF5 output, efficient binary format, for storing many atom properties'},
+        {'linetype': 'comment', 'title': 'NOTE: requires NUFEB built with HDF5 option'},
+        {'linetype': 'subsection', 'title': 'Create directory(s) for dump'},
+        {'linetype': 'command', 'name': 'shell', 'command': 'mkdir alt_hdf5'},
+        {'linetype': 'command', 'name': 'shell', 'command': 'mkdir hdf5'},
+        {'linetype': 'subsection', 'title': 'Dump specifications'},
+        {'linetype': 'command', 'name': 'dump', 'dumpname': 'du_hdf5_0', 'group': 'all', 'format': 'nufeb/hdf5',
+         'every_n': '4', 'loc': 'hdf5/custom_dump.h5', 'dumpvars': 'id type x y z vx vy vz fx fy fz radius conc'},
+        {'linetype': 'command', 'name': 'dump', 'dumpname': 'du_hdf5_1', 'group': 'all', 'format': 'nufeb/hdf5',
+         'every_n': '2', 'loc': 'hdf5/custom_dumpB.h5', 'dumpvars': 'id type x y z reac'},
+        {'linetype': 'command', 'name': 'dump', 'dumpname': 'du_hdf5_2', 'group': 'all', 'format': 'nufeb/hdf5',
+         'every_n': '9', 'loc': 'alt_hdf5/custom_dump.h5', 'dumpvars': 'id type x y z vx vy vz fx fy fz radius conc reac'},
+    ]
+
+    dump_A = HDF5DumpSpec(dumpname="custom_dump.h5", dumpdir="hdf5", nsteps=4, dump_bugs=BugDumpSpec("all").hdf5_vars(),
+                          dump_chems=ChemDumpSpec("conc").hdf5_vars())
+    dump_B = HDF5DumpSpec(dumpname="custom_dumpB.h5", dumpdir="hdf5", nsteps=2, dump_bugs=BugDumpSpec("location").hdf5_vars(),
+                          dump_chems=ChemDumpSpec("reac").hdf5_vars())
+    dump_C = HDF5DumpSpec(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=9, dump_bugs=BugDumpSpec("all").hdf5_vars(),
+                          dump_chems=ChemDumpSpec("all").hdf5_vars())
+
+    isb.add_hdf5_output([dump_A, dump_B, dump_C])
+    assert isb.config_vals['computation_output'][0]['hdf5_output'] == expected_ABC

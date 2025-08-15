@@ -4,8 +4,8 @@ from nufebmgr import NufebProject
 def configure_project():
     with NufebProject() as prj:
         prj.use_seed(1701)
-        prj.set_box(x=50,
-                    y=50,
+        prj.set_box(x=120,
+                    y=120,
                     z=50)
         prj.enable_inferring_substrates()
         prj.add_taxon_by_template(name="basic_het",
@@ -14,14 +14,15 @@ def configure_project():
                                   template="slow_heterotroph")
         prj.add_taxon_by_template(name="small_het",
                                   template="small_heterotroph")
+        prj.set_taxa_groups({'basic_het': '4', 'slow_het': '6', 'small_het': '7'})
 
-        prj.layout_uniform(nbugs=15)
+        prj.layout_poisson(radius=8)
 
         prj.set_composition({'basic_het':'33.33',
                              'slow_het':'33.33',
                              'small_het':'33.33',})
 
-        prj.distribute_spatially_even()
+        prj.distribute_even_strips("vertical")
 
         prj.set_track_abs()
         prj.enable_thermo_output(timestep=1)

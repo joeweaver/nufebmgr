@@ -1,4 +1,5 @@
 from jinja2 import Template
+from pathlib import Path
 from .SimulationBox import SimulationBox
 from .Substrate import Substrate
 from typing import Any, Dict, List
@@ -18,12 +19,11 @@ class InputScriptBuilder:
         else:
             self.config_vals['microbes_and_groups'][0]['bug_groups'] = []
 
-    def build_bug_groups(self, active_taxa, lysis_groups, keep_dead=True):
+    def build_bug_groups(self, group_assignemnts, active_taxa, lysis_groups, keep_dead=True):
         self.clear_bug_groups(keep_dead)
         all_groups = {**active_taxa, **lysis_groups}
-        for i, k in enumerate(all_groups):
-            entry = {'name': 'group', 'group_name': k, 'param': 'type', 'group_num': i+1}
-            self.group_assignments[k]=i+1
+        for k, v in group_assignemnts.items():
+            entry = {'name': 'group', 'group_name': k, 'param': 'type', 'group_num': v}
             if 'description' in all_groups[k]:
                 entry['comment'] = f'# {all_groups[k]["description"]}'
             self.config_vals['microbes_and_groups'][0]['bug_groups'].append(entry)
@@ -356,15 +356,70 @@ class InputScriptBuilder:
                 raise KeyError(f"Taxon {k} has unrecognized division strategy: {active_taxa[k]['division_strategy']['name'] }")
 
     def add_hdf5_output(self, hdf5_dump_specs: List[HDF5DumpSpec]):
-        self.config_vals['computation_output'][0]['hdf5_output'] = [
-            {'name': 'HDF5 output, efficient binary format for storing many atom properties'},
-            {'name': 'requires NUFEB built with HDF5 option'},
-            {'name': 'shell', 'command': 'mkdir hdf5', 'comment': '#Create directory for dump'},
-            {'name': 'dump', 'dumpname': 'du3', 'group': 'all', 'format': 'nufeb/hdf5', 'p1': '1',
-                'loc': 'hdf5/dump.h5',
-                'dumpvars': 'id type x y z radius', 'comment': ''},
-         ]
+        if hdf5_dump_specs == []:
+            self.config_vals['computation_output'][0]['hdf5_output'] = []
+            return
 
+        self.config_vals['computation_output'][0]['hdf5_output'] = [
+            {'linetype': 'subsection',
+             'title': 'HDF5 output, efficient binary format, for storing many atom properties'},
+            {'linetype': 'comment', 'title': 'NOTE: requires NUFEB built with HDF5 option'},
+            {'linetype': 'subsection', 'title': 'Create directory(s) for dump'}]
+
+        # create a list of unique dumpdirs
+        dump_dirs = list({Path(hds.dumpdir) for hds in hdf5_dump_specs})
+        for dump_dir in sorted(dump_dirs):
+            self.config_vals['computation_output'][0]['hdf5_output'].append(
+              {'linetype': 'command', 'name': 'shell', 'command': f'mkdir {dump_dir}'})
+
+        self.config_vals['computation_output'][0]['hdf5_output'].append({'linetype': 'subsection', 'title': 'Dump specifications'})
+
+        for i, hds in enumerate(hdf5_dump_specs):
+            save_loc = Path(hds.dumpdir) / hds.dumpname
+            dump_vars = ' '.join(hds.dump_bugs + hds.dump_chems)
+            self.config_vals['computation_output'][0]['hdf5_output'].append(
+              {'linetype': 'command', 'name': 'dump', 'dumpname': f'du_hdf5_{i}', 'group': 'all',
+               'format': 'nufeb/hdf5', 'every_n': f'{hds.nsteps}',
+                  'loc': f'{save_loc}', 'dumpvars': f'{dump_vars}'})
+
+        # self.config_vals['computation_output'][0]['hdf5_output'] = [
+        #     {'name': 'HDF5 output, efficient binary format for storing many atom properties'},
+        #     {'name': 'requires NUFEB built with HDF5 option'},
+        #     {'name': 'shell', 'command': 'mkdir hdf5', 'comment': '#Create directory for dump'},
+        #     {'name': 'dump', 'dumpname': 'du3', 'group': 'all', 'format': 'nufeb/hdf5', 'p1': '1',
+        #         'loc': 'hdf5/dump.h5',
+        #         'dumpvars': 'id type x y z radius', 'comment': ''},
+        #  ]
+
+        #create a header
+        #create 1 or more directories,unless directory is "."
+        #one dump command for each entry
+        #New structure
+        #[
+        #    {'title': 'HDF5 output, efficient binary format, for storing many atom properties'},
+        #    {'title': 'NOTE: requires NUFEB built with HDF5 option'},
+        ##next line only if we need to make dirs
+        #    {'title': 'Create directory(s) for dump'},
+        #    {'name': 'shell', 'command': 'mkdir hdf5', 'comment': ''},
+        #    {'name': 'dump', 'dumpname': 'du3', 'group': 'all', 'format': 'nufeb/hdf5', 'p1': '1',
+        #     'loc': 'hdf5/dump.h5', 'dumpvars': 'id type x y z radius', 'comment': ''},
+        #]
+
+
+        # let's mess with jinja2 first and get thigns running
+        # self.config_vals['computation_output'][0]['hdf5_output'] = [
+        #   {'linetype': 'subsection', 'title': 'HDF5 output, efficient binary format, for storing many atom properties'},
+        #   {'linetype': 'comment', 'title': 'NOTE: requires NUFEB built with HDF5 option'},
+        #   {'linetype': 'subsection', 'title': 'Create directory(s) for dump'},
+        #   {'linetype': 'command', 'name': 'shell', 'command': 'mkdir hdf5'},
+        #   {'linetype': 'command', 'name': 'shell', 'command': 'mkdir alt_hdf5'},
+        #   {'linetype': 'subsection', 'title': 'Dump specifications'},
+        #   {'linetype': 'command', 'name': 'dump', 'dumpname': 'du3', 'group': 'all', 'format': 'nufeb/hdf5', 'every_n': '10',
+        #       'loc': 'hdf5/dump.h5', 'dumpvars': 'id type x y z radius fx fy fz'},
+        #  {'linetype': 'command', 'name': 'dump', 'dumpname': 'du3a', 'group': 'all', 'format': 'nufeb/hdf5',
+        #   'every_n': '1',
+        #   'loc': 'alt_hdf5/dump.h5', 'dumpvars': 'id type x y z radius'},
+        # ]
     def add_vtk_output(self):
         self.config_vals['computation_output'][0]['vtk_output'] = [
             {'name': 'VTK output, useful for paraview visualizations'},

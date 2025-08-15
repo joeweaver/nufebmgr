@@ -14,6 +14,7 @@ def configure_project():
         prj.set_composition({'anammox_two_pathway':'33.333',
                              'denitrifier':'33.33',
                              'imperfect_denitrifier_no':'33.33'})
+        prj.set_taxa_groups({'anammox_two_pathway': '4', 'denitrifier': '6', 'imperfect_denitrifier_no': '7'})
 
         prj.distribute_spatially_even()
 

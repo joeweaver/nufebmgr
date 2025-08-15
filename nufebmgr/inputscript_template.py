@@ -99,14 +99,29 @@ TEMPLATE_STR = \
   {%- for subsection, items in section.items() %}
     {%- if subsection == 'title' %}
 {{ items }}
-    {%- else %}
-      {%- for entry in items %}
+    {%- elif subsection != 'hdf5_output' %}
+{%- for entry in items %}
         {%- set values = entry.values() | list %}
         {%- if values | length < 2 %}
 
 # {{ values[0] }}
         {%- else %}
 {{ values | join(' ') }}
+        {%- endif %}
+      {%- endfor %}
+    {%- else %}
+      {%- for entry in items %}
+        {%- if "linetype" in entry.keys() %}
+            {%- if entry.linetype == 'subsection' %}
+\n# {{ entry.title }}
+            {%- endif %}
+            {%- if entry.linetype == 'comment' %}
+# {{ entry.title }}
+            {%- endif %}
+            {%- if entry.linetype == 'command' %}
+            {%- set _dummy=entry.pop('linetype') %}
+{{ entry.values() | list | join(' ')}}
+            {%- endif %}
         {%- endif %}
       {%- endfor %}
     {%- endif %}

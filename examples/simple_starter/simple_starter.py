@@ -4,9 +4,9 @@ from nufebmgr import NufebProject
 def configure_project():
     with NufebProject() as prj:
         prj.use_seed(1701)
-        prj.set_box(x=90,
-                    y=90,
-                    z=60)
+        prj.set_box(x=50,
+                    y=50,
+                    z=50)
         prj.enable_inferring_substrates()
         prj.add_taxon_by_template(name="basic_het",
                                   template="basic_heterotroph")
@@ -14,6 +14,7 @@ def configure_project():
                                   template="slow_heterotroph")
         prj.add_taxon_by_template(name="small_het",
                                   template="small_heterotroph")
+        prj.set_taxa_groups({'basic_het': '4', 'slow_het': '6', 'small_het': '7'})
 
         prj.layout_uniform(nbugs=15)
 
@@ -23,12 +24,7 @@ def configure_project():
 
         prj.distribute_spatially_even()
 
-        prj.set_boundary_scenario("bioreactor")
-        prj.set_substrate("sub","2e-3","1.5e-3","2.0e-9","0.5")
-
-
         prj.set_track_abs()
-        prj.stop_at_biomass_percent(2)
         prj.enable_thermo_output(timestep=1)
         atom_in, inputscript = prj.generate_case()
         return atom_in, inputscript

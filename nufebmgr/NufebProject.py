@@ -4,7 +4,7 @@ from jinja2 import Template
 import cv2
 import csv
 import json
-from typing import Literal
+from typing import Literal, Dict
 from .SimulationBox import SimulationBox
 from .Substrate import Substrate
 from .InputScriptBuilder import InputScriptBuilder
@@ -154,11 +154,12 @@ class NufebProject:
         self.write_csv = False
         self.max_biofilm_height = None
         self.hdf5_dump_specs = [HDF5DumpSpec(dumpname ="dump.h5", dumpdir ="hdf5", nsteps =1,
-                           dump_bugs =BugDumpSpec(), dump_chems =ChemDumpSpec())]
+                           dump_bugs =BugDumpSpec().hdf5_vars(), dump_chems =ChemDumpSpec().hdf5_vars())]
         self.write_vtk = True
         self.forced_substrate_grid_size=None
         self.infer_substrates=False
         self.elastic_bl=None
+        self.group_assignments = {}
 
 
     # __enter__ and __exit__ for handling using project as context
@@ -219,7 +220,7 @@ class NufebProject:
             if (hds.dumpdir == dumpdir) and (hds.dumpname == dumpname):
                 raise ValueError(f'Specified multiple HDF5 dump files named {dumpname} in directory {dumpdir}')
 
-        self.hdf5_dump_specs.append(HDF5DumpSpec(dumpname, dumpdir, nsteps, dump_bugs, dump_chems))
+        self.hdf5_dump_specs.append(HDF5DumpSpec(dumpname, dumpdir, nsteps, dump_bugs.hdf5_vars(), dump_chems.hdf5_vars()))
 
 
 
@@ -387,7 +388,36 @@ class NufebProject:
     def limit_biofilm_height(self,max_height):
         self.max_biofilm_height = max_height
 
+    def set_taxa_groups(self, taxa_groups:Dict[str,str]) -> None:
+        """
+        Sets the dictionary associating taxa names with specific group numbers.
+
+        Example dict: {'taxon_a': '1', 'taxon_b': '2'}
+
+        :param taxa_groups: Association dictionary
+        """
+        self.group_assignments = taxa_groups
+
+    def max_group_ID(self)-> int:
+        """
+        Return the maxium group ID specified. Used to generate a value atom.in
+        :return: Maximum group ID
+        """
+        return max((int(group_id) for group_id in self.group_assignments.values()), default=0)
+
     def generate_case(self):
+        # raise errors if required steps are not done
+        # TODO there are more required setups to find and explicitly check
+        if self.group_assignments == {}:
+            raise ValueError('Taxa Group IDs are not defined, please assign using set_taxa_groups')
+
+        gak = set(self.group_assignments.keys())
+        atk =set(list(self.active_taxa.keys()) + list(self.lysis_groups.keys()))
+        if len(gak - atk) != 0:
+            raise ValueError(f'Group ID assigned to "{", ".join(sorted(gak - atk ))}", but they do no appear in taxa list.')
+        if len(atk - gak) != 0:
+            raise ValueError(f'No group ID assigned to "{", ".join(sorted(atk - gak ))}"')
+
         # because bits of these depend on each other, we enforce order of calling
         inputscript = self._generate_inputscript()
         atom_in = self._generate_atom_in()
@@ -405,7 +435,7 @@ class NufebProject:
          # Define the values for the placeholders
          config_values = {
              'n_atoms': f'{self._n_members()}',
-             'n_types': f'{self._n_types()}',
+             'n_types': f'{self.max_group_ID()+1}',
              'xlen_m': f'{self.sim_box.xlen}e-6',
              'ylen_m': f'{self.sim_box.ylen}e-6',
              'zlen_m': f'{self.sim_box.zlen}e-6',
@@ -507,7 +537,7 @@ class NufebProject:
                 raise ValueError("An elastic boundary layer was set for a non-bioreactor scenario. Only bioreactor scenarios support elastic boundary layers at this time")
             isb.build_post_physical(self.elastic_bl)
         isb.build_diffusion(self.substrates)
-        isb.build_bug_groups(self.active_taxa,self.lysis_groups)
+        isb.build_bug_groups(self.group_assignments, self.active_taxa, self.lysis_groups)
         isb.clear_growth_strategy()
         isb.build_growth_strategy(self.active_taxa)
         isb.clear_division()
@@ -544,7 +574,7 @@ class NufebProject:
         if self.max_biofilm_height is not None:
             isb.limit_biofilm_height(self.max_biofilm_height)
 
-        self.group_assignments = isb.group_assignments
+
         return isb.generate()
 
 

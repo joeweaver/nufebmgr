@@ -17,7 +17,7 @@ def configure_project():
 
         prj.layout_poisson(5)
 
-        prj.set_composition({'attacker_slow':'33.33',
+        prj.set_composition({'attacker':'33.33',
                              'vuln':'33.33',
                              'immune':'33.33',})
 
@@ -27,7 +27,7 @@ def configure_project():
         prj.enable_thermo_output(timestep=1)
         prj.clear_hdf5_output()
         prj.add_lysis_group_by_json('vuln_intoxicated',{'name':'vuln_intoxicated','releases':'sub','rate':'2e-3','percent':'0.2'})
-
+        prj.set_taxa_groups({'attacker': '4', 'vuln': '6', 'vuln_intoxicated': '7', 'immune': '8'})
         prj.arm_t6ss(taxon="attacker",effector="toxin_a",harpoon_len=1.3e-6,cooldown=100)
         prj.vuln_t6ss(taxon="immune",effector="toxin_a",prob=1,to_group="vuln_intoxicated")
         prj.limit_biofilm_height(2)

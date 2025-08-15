@@ -1,24 +1,24 @@
 from nufebmgr import NufebProject
 
+
 def configure_project():
     with NufebProject() as prj:
-        prj.use_seed(42)
-        prj.set_box(x=50,
-                    y=50,
+        prj.use_seed(1701)
+        prj.set_box(x=100,
+                    y=100,
                     z=50)
         prj.enable_inferring_substrates()
         prj.add_taxon_by_jsonfile("example.json")
 
-        prj.layout_uniform(nbugs=20)
+        mappings = {"FF1B9E77": 'basic_heterotroph',
+                    "FFD95F02": 'slow_heterotroph',
+                    "FF7570B3": 'small_heterotroph'}
+        prj.set_taxa_groups({'basic_heterotroph': '1', 'slow_heterotroph': '2', 'small_heterotroph': '3'})
 
-        prj.set_composition({'basic_heterotroph':'25',
-                             'slow_heterotroph':'50',
-                             'small_heterotroph':'25'})
-
-        prj.distribute_spatially_even()
-
+        prj.simple_image_layout('layout.png', mappings)
         prj.set_track_abs()
         prj.enable_thermo_output(timestep=1)
+        prj.run_for_N_steps(int(6*60*60/900)) # 6 hours assuming 900s biological timestep
 
         atom_in, inputscript = prj.generate_case()
         return atom_in, inputscript
@@ -32,5 +32,3 @@ if __name__ == '__main__':
 
     with open("inputscript.nufeb", "w") as outf:
         outf.write(inputscript)
-
-

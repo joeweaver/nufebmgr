@@ -131,7 +131,7 @@ def test_default_single_custom_hdf5(prj:NufebProject,):
     prj.add_custom_hdf5_output()
     assert len(prj.hdf5_dump_specs) == 1
     ho = prj.hdf5_dump_specs[0]
-    expected = HDF5DumpSpec(dumpname ="dump.h5", dumpdir ="hdf5", nsteps =1, dump_bugs =BugDumpSpec(), dump_chems =ChemDumpSpec())
+    expected = HDF5DumpSpec(dumpname ="dump.h5", dumpdir ="hdf5", nsteps =1, dump_bugs =BugDumpSpec().hdf5_vars(), dump_chems =ChemDumpSpec().hdf5_vars())
     assert ho == expected
 
 def test_single_custom_hdf5(prj: NufebProject, ):
@@ -143,8 +143,8 @@ def test_single_custom_hdf5(prj: NufebProject, ):
     prj.add_custom_hdf5_output(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=10, dump_bugs=BugDumpSpec("location"),
                             dump_chems=ChemDumpSpec("reac"))
     assert len(prj.hdf5_dump_specs) == 1
-    expected = HDF5DumpSpec(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=10, dump_bugs=BugDumpSpec("location"),
-                            dump_chems=ChemDumpSpec("reac"))
+    expected = HDF5DumpSpec(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=10, dump_bugs=BugDumpSpec("location").hdf5_vars(),
+                            dump_chems=ChemDumpSpec("reac").hdf5_vars())
     assert prj.hdf5_dump_specs[0] == expected
 
 def test_multiple_custom_hdf5(prj: NufebProject, ):
@@ -158,14 +158,14 @@ def test_multiple_custom_hdf5(prj: NufebProject, ):
     prj.add_custom_hdf5_output(dumpname="custom_dumpb.h5", dumpdir="altb_hdf5", nsteps=1, dump_bugs=BugDumpSpec("all"),
                             dump_chems=ChemDumpSpec("conc"))
     assert len(prj.hdf5_dump_specs) == 2
-    expected0 = HDF5DumpSpec(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=1, dump_bugs=BugDumpSpec("location"),
-                            dump_chems=ChemDumpSpec("reac"))
-    expected1 = HDF5DumpSpec(dumpname="custom_dumpb.h5", dumpdir="altb_hdf5", nsteps=1, dump_bugs=BugDumpSpec("all"),
-                            dump_chems=ChemDumpSpec("conc"))
+    expected0 = HDF5DumpSpec(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=1, dump_bugs=BugDumpSpec("location").hdf5_vars(),
+                            dump_chems=ChemDumpSpec("reac").hdf5_vars())
+    expected1 = HDF5DumpSpec(dumpname="custom_dumpb.h5", dumpdir="altb_hdf5", nsteps=1, dump_bugs=BugDumpSpec("all").hdf5_vars(),
+                            dump_chems=ChemDumpSpec("conc").hdf5_vars())
     assert prj.hdf5_dump_specs[0] == expected0
     assert prj.hdf5_dump_specs[1] == expected1
 
-def test_multiple_custom_no_file_clobber_hdf5(prj: NufebProject, ):
+def test_multiple_custom_no_file_clobber_hdf5(prj: NufebProject ):
     bds = BugDumpSpec()
     cds = ChemDumpSpec()
     prj.clear_hdf5_output()
@@ -185,5 +185,80 @@ def test_multiple_custom_no_file_clobber_hdf5(prj: NufebProject, ):
         prj.add_custom_hdf5_output(dumpname="custom_dump.h5", dumpdir="alt_hdf5", nsteps=1,
                                    dump_bugs=BugDumpSpec("all"),
                                    dump_chems=ChemDumpSpec("conc"))
+    except Exception as e:
+        pytest.fail(f'Unexpected exception {e}')
+
+def test_assign_groups():
+    def setup_local(taxa_filename:str) -> NufebProject:
+        prj = NufebProject()
+        prj.add_taxon_by_jsonfile(taxa_filename)
+        prj.layout_uniform(nbugs=20)
+        prj.set_composition({'anammox_two_pathway': '33.333',
+                             'denitrifier': '33.33',
+                             'imperfect_denitrifier_no': '33.33'})
+        prj.distribute_spatially_even()
+        return prj
+
+    #error if generate called without assignment
+    prj = setup_local(DATA_DIR / "example_nitrogen_anaerobic_taxa.json")
+    prj._assign_taxa()
+    with pytest.raises(ValueError) as excinfo:
+        prj.generate_case()
+    assert f'Taxa Group IDs are not defined, please assign using set_taxa_groups' in str(excinfo.value)
+
+    #error if group asigned to non-existent taxon
+    prj = setup_local(DATA_DIR / "example_nitrogen_anaerobic_taxa.json")
+    prj._assign_taxa()
+    prj.set_taxa_groups({'anammox_two_pathway':'4', 'denitrifier':'6', 'imperfect_denitrifier_no':'8',
+                         'this_one_dne':'9'})
+    with pytest.raises(ValueError) as excinfo:
+        prj.generate_case()
+    assert f'Group ID assigned to "this_one_dne", but they do no appear in taxa list.' in str(excinfo.value)
+
+    #error if taxon has no group assignment
+    prj = setup_local(DATA_DIR / "example_nitrogen_anaerobic_taxa.json")
+    prj._assign_taxa()
+    prj.set_taxa_groups({'anammox_two_pathway':'4'})
+    with pytest.raises(ValueError) as excinfo:
+        prj.generate_case()
+    assert f'No group ID assigned to "denitrifier, imperfect_denitrifier_no"' in str(excinfo.value)
+
+    #happy path 1
+    prj = setup_local(DATA_DIR / "example_nitrogen_anaerobic_taxa.json")
+    prj._assign_taxa()
+    prj.set_taxa_groups({'anammox_two_pathway': '4', 'denitrifier': '6', 'imperfect_denitrifier_no': '8'})
+    try:
+        prj.generate_case()
+    except Exception as e:
+        pytest.fail(f'Unexpected exception {e}')
+
+    #happy path 2
+    prj = setup_local(DATA_DIR / "example_nitrogen_anaerobic_taxa.json")
+    prj._assign_taxa()
+    prj.set_taxa_groups({'anammox_two_pathway': '7', 'denitrifier': '6', 'imperfect_denitrifier_no': '8'})
+    try:
+        prj.generate_case()
+    except Exception as e:
+        pytest.fail(f'Unexpected exception {e}')
+
+    #should account for lysis groups
+    prj = setup_local(DATA_DIR / "example_nitrogen_anaerobic_taxa.json")
+    prj.add_lysis_group_by_json('vuln_intoxicated',
+                                {'name': 'vuln_intoxicated', 'releases': 'sub', 'rate': '2e-3', 'percent': '0.2'})
+    prj._assign_taxa()
+    prj.set_taxa_groups({'anammox_two_pathway': '7', 'denitrifier': '6', 'imperfect_denitrifier_no': '8'})
+    with pytest.raises(ValueError) as excinfo:
+        prj.generate_case()
+    assert f'No group ID assigned to "vuln_intoxicated"' in str(excinfo.value)
+
+    #happy path 3 with lysis group
+    prj = setup_local(DATA_DIR / "example_nitrogen_anaerobic_taxa.json")
+    prj._assign_taxa()
+    prj.set_taxa_groups({'anammox_two_pathway': '7', 'denitrifier': '6', 'imperfect_denitrifier_no': '8', 'vuln_intoxicated':'7'})
+    # adding after the fact intentionally here to exercise order-independence
+    prj.add_lysis_group_by_json('vuln_intoxicated',
+                                {'name': 'vuln_intoxicated', 'releases': 'sub', 'rate': '2e-3', 'percent': '0.2'})
+    try:
+        prj.generate_case()
     except Exception as e:
         pytest.fail(f'Unexpected exception {e}')

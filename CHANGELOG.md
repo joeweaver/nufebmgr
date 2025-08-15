@@ -12,7 +12,8 @@
   * inferences are not guaranteed to make sensible guesses on initial/boundary concentrations or on diffusion parameters, it is on the user to check those
 * ``set_runtime`` was ambiguously named (number of steps, total simulation time?) and has been renamed to ``run_for_N_steps``
 * Multiple HDF5 outputs available, so ``disable_hdf5_output`` is now named ``clear_hdf5_output`` 
-
+* Now required to explicitly map taxa to group IDs using 1set_taxa_groups``
+  * See issue at https://github.com/joeweaver/nufebmgr/issues/4
 ## New functions
 
 * Elastic boundary layers *x* microns above the surface of the biofilm are now possible for ``bioreactor`` boundary conditions
@@ -24,6 +25,7 @@
   * directly via ``set_biological_timestep_size_s``
   * optionally as part of the new convenience function ``run_for_N_hours``
   * note that ``set_runtime`` is now more properly named ``run_for_N_steps``
+* Can now specify multiple, custom HDF5 dumps, see ``add_custom_hdf5_output``
 
 ## Other
 

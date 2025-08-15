@@ -14,6 +14,7 @@ def configure_project():
                                   template="slow_heterotroph")
         prj.add_taxon_by_template(name="small_het",
                                   template="small_heterotroph")
+        prj.set_taxa_groups({'basic_het': '1', 'slow_het': '2', 'small_het': '3'})
 
         prj.layout_uniform(nbugs=15)
 
