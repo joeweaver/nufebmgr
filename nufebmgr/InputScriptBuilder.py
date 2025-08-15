@@ -182,7 +182,7 @@ class InputScriptBuilder:
         self.config_vals['biological_processes'][0]['growth'].append({'name':'Growth Strategies'})
         for k,v in self.group_assignments.items():
             if k not in active_taxa:
-                break
+                continue
             if 'growth_strategy' not in active_taxa[k]:
                 raise KeyError(f"Growth strategy is not defined for taxon: {k}")
             # TODO need to abstract this better. Overarching goal is that new fixes and taxa jsons shouldn't necessitate touching this
@@ -330,7 +330,7 @@ class InputScriptBuilder:
 
         for k,v in self.group_assignments.items():
             if k not in active_taxa: # TODO should this be an error?
-                break
+                continue
             if 'division_strategy' not in active_taxa[k]:
                 raise KeyError(f"Division strategy is not defined for taxon: {k}")
             if active_taxa[k]['division_strategy']['name'] == 'divide_coccus':

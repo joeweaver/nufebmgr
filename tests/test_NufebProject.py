@@ -30,6 +30,7 @@ def test_error_on_assign_taxa_not_all_taxa_have_entries_or_compositions():
                              'imperfect_denitrifier_no': '45'})
         prj.distribute_spatially_even()
         prj._generate_atom_in()
+        prj._generate_inputscript()
         return prj
 
     with pytest.raises(ValueError) as excinfo:
