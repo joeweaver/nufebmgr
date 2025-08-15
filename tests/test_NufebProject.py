@@ -25,10 +25,11 @@ def test_error_on_assign_taxa_not_all_taxa_have_entries_or_compositions():
         prj = NufebProject()
         prj.add_taxon_by_jsonfile(taxa_filename)
         prj.layout_uniform(nbugs=20)
-        prj.set_composition({'anammox_two_pathway': '33.333',
-                             'denitrifier': '33.33',
-                             'imperfect_denitrifier_no': '33.33'})
+        prj.set_composition({'anammox_two_pathway': '10',
+                             'denitrifier': '45',
+                             'imperfect_denitrifier_no': '45'})
         prj.distribute_spatially_even()
+        prj._generate_atom_in()
         return prj
 
     with pytest.raises(ValueError) as excinfo:

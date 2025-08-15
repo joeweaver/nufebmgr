@@ -357,14 +357,25 @@ class NufebProject:
             return
 
         if self.spatial_distribution == "even":
-            a1 = list(self.active_taxa.keys())
-            s1 =self._n_members()
             all_compositions = [float(value) for value in self.composition.values()]
             total = sum(all_compositions)
-            p1 = [value / total for value in all_compositions]
-            assignments = np.random.choice(a1, size=s1, p= p1, replace=True)
-            for bug, taxon in zip(self.bug_locs, assignments):
-                bug.taxon_name = taxon
+            rel_abs = {}
+            for taxon,ab in self.composition.items():
+                rv = float(ab)/total
+                rel_abs[taxon] = rv
+            taxa = list(rel_abs.keys())
+            probs = list(rel_abs.values())
+            population = np.random.choice(taxa, size=self._n_members(), p=probs)
+            for bug_loc, taxon in zip(self.bug_locs, population):
+                bug_loc.taxon_name = taxon
+            #a1 = list(self.active_taxa.keys())
+            #s1 = self._n_members()
+            #all_compositions = [float(value) for value in self.composition.values()]
+            #total = sum(all_compositions)
+            #p1 = [value / total for value in all_compositions]
+            #assignments = np.random.choice(a1, size=s1, p= p1, replace=True)
+            #for bug, taxon in zip(self.bug_locs, assignments):
+            #    bug.taxon_name = taxon
         elif self.spatial_distribution == "strips":
             tam = TaxaAssignmentManager(self.bug_locs)
             if self.spatial_distribution_params["direction"] == "horizontal":
