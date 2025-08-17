@@ -1,0 +1,135 @@
+#-----------------------------------------------------------------------------#
+#                NUFEB Simulation: Heterotrophic Biofilm Growth              
+#-----------------------------------------------------------------------------#
+
+
+#-----------------------------System Settings---------------------------------#
+
+units si                                   
+atom_style      coccus                     
+atom_modify     map array sort 10 0        
+		                            # sort every 10
+
+boundary        pp pp ff                   
+                                            # fixed boundary in z
+
+newton          off                        
+                                            # atoms are computed in each
+					     # processor without communication
+					     
+processors      * * 1                      
+
+comm_modify     vel yes                    
+
+read_data       atom.in	            
+                                            # and initial atoms	
+
+region 1 block INF INF INF INF INF INF
+
+#--------------------Microbes and Functional Groups-------------------------#
+
+group           denit type 6 
+
+group           dead empty
+
+neighbor        2e-6 bin                  
+
+neigh_modify    every 1                   
+                                           # had moved more than half the skin distance
+
+
+#--------------------------Mesh Grid and Substrates--------------------------#
+
+# defining grid style, substrate names, and grid size
+grid_style      nufeb/chemostat 7 sub o2 no2 no nh4 no3 n2o 2e-6  
+
+# set diffusion boundary conditions and initial concentrations (liquid:kg/m3)
+grid_modify     set sub  pp pp nd  10e-3 
+grid_modify     set o2   pp pp nd  1e-9 
+grid_modify     set no2  pp pp nd  10e-3 
+grid_modify     set nh4  pp pp nd  10e-3 
+grid_modify     set no  pp pp nd  1e-3 
+grid_modify     set no3  pp pp nd  10e-3 
+grid_modify     set n2o  pp pp nd  1e-9 
+#grid_modify     set n2  pp pp nd  1e-9 
+
+#--------------------------Biological Processes-------------------------------#
+
+# heterotrophs growth
+
+fix growth_denit  denit  nufeb/growth/denit sub 0.02 0.02 0.02 0.02 0.04 o2 1e-4 1e-4 1e-4 1e-4 1e-4 no3 2e-4 no2 2e-4 n2o 5e-5 no 5e-5 5e-4 3e-4 7.5e-5 nh4 0.086 growth 7.2338e-5 yield 0.6 decay 7e-7 eta_g2 0.28 eta_g3 0.16 eta_g4 0.35 eta_g5 0.35 eta_Y 0.9
+
+fix divv denit  nufeb/division/coccus 1.3e-6 1234
+
+# remove cells from system if they've died enough, indicated by size
+fix death all nufeb/death/diameter dead 2.5e-7
+fix rem_dead dead evaporate 1 1000000 1 1701 # this will get all of them
+
+#---------------------------Physical Processes--------------------------------#
+# Kn Kt gamma_n gamma_t xmu dampflag keyword
+# Kn - elastic cont for repulsion
+# Kt - elastic const for tangental contact
+# gamma_n damping cofficient
+# gamma_t damping for tangential
+# dampflag - exclude tangential damp
+# keyword limit damping
+pair_style  gran/hooke/history 1e-2 NULL 1e-3 NULL 0.0 0   
+#pair_style  gran/hertz/history 282 NULL 28 NULL 0.0 0   
+pair_coeff  * *                                            
+
+# pairwise interaction between z-wall and atoms
+fix wall all wall/gran hooke/history 0.5 NULL 0.5 NULL 0 0 zplane 0.0 3e-04
+
+fix vis all viscous 1e-6                                   
+
+fix nve all nve/limit 1e-7                                 
+                                                            # maximum distance limit       
+
+#---------------------------Post-Physical Processes---------------------------#
+fix blayer all nufeb/boundary_layer 10e-6 1 zhi
+
+fix coeff_sub all nufeb/diffusion_coeff sub ratio 0.3      
+fix coeff_o2 all nufeb/diffusion_coeff o2 ratio 0.6      
+fix coeff_no2 all nufeb/diffusion_coeff no2 ratio 0.6      
+fix coeff_no all nufeb/diffusion_coeff no ratio 0.6      
+fix coeff_nh4 all nufeb/diffusion_coeff nh4 ratio 0.8      
+fix coeff_no3 all nufeb/diffusion_coeff no3 ratio 0.6      
+fix coeff_n2o all nufeb/diffusion_coeff n2o ratio 0.6      
+#fix coeff_n2 all nufeb/diffusion_coeff n2 ratio 0.6       # defining diffusion coeff in the biofilm 
+
+#---------------------------Chemical Processes---------------------------------#
+
+fix diff_sub all nufeb/diffusion_reaction sub 1.0e-9       
+fix diff_o2 all nufeb/diffusion_reaction o2 2.0e-9       
+fix diff_no2 all nufeb/diffusion_reaction no2 1.7e-9       
+fix diff_no all nufeb/diffusion_reaction no 2.07e-9       
+fix diff_nh4 all nufeb/diffusion_reaction nh4 1.97e-9       
+fix diff_no3 all nufeb/diffusion_reaction no3 1.7e-9       
+fix diff_n2o all nufeb/diffusion_reaction n2o 2.57e-9       
+#fix diff_n2 all nufeb/diffusion_reaction n2 1.88e-9       
+
+#--------------------------Computations and Outputs----------------------------#
+
+variable mass equal "mass(all)"                            
+variable n_denit equal "count(denit)"
+
+#shell mkdir vtk                                           
+dump du1 all vtk 1 vtk/dump*.vtu id type diameter        
+dump du2 all grid/vtk 10 vtk/dump_%_*.vti con rea den gro
+
+
+#dump du3 all movie 10 movie.avi type diameter view 80 60   
+#dump_modify du3 acolor 1 blue acolor 2 lightgrey framerate 10
+
+thermo_style custom step cpu atoms v_n_denit    
+thermo 1
+
+#-----------------------------------Run----------------------------------------#
+
+# issue run command, define timesteps for physical (pairdt) and chemical (diffdt) processes
+run_style nufeb diffdt 1e-4 difftol 1e-6 pairdt 1e-2 pairtol 1 screen no pairmax 1000 diffmax 5000
+
+timestep 1800                                              
+
+run 10900                                                   
+
