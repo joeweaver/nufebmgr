@@ -20,6 +20,10 @@ def test_initialization():
     project = NufebProject()
     assert project is not None
 
+    # defaults
+    assert project.track_abs == False
+    assert project.track_vol == False
+
 def test_error_on_assign_taxa_not_all_taxa_have_entries_or_compositions():
     def setup_local(taxa_filename:str) -> NufebProject:
         prj = NufebProject()
@@ -62,6 +66,10 @@ def test_error_on_assign_taxa_not_all_taxa_have_entries_or_compositions():
         ("use_seed", "seed", 19, 19),
         ("use_seed", "seed", None, 1701),
         ("set_biological_timestep_size_s", "biostep", 1100, 1100),
+        ("set_track_abs", "track_abs", False, False),
+        ("set_track_abs", "track_abs", True, True),
+        ("set_track_vol", "track_vol", False, False),
+        ("set_track_vol", "track_vol", True, True),
     ]
 )
 def test_API_contract(prj:NufebProject, setter_name: str, getter_name:str, input_value:Any, expected_value:Any) -> None:

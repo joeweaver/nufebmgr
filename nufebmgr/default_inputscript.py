@@ -141,6 +141,7 @@ DEFAULT_INPUTSCRIPT = {
         ],
         "computation_output": [
             {"title": "#" + "Computations and Outputs".center(INPUT_FILE_WIDTH-2, '-') + "#",
+             "vol_track": [],
              "ab_track": [{'name': 'Abundance Tracking'},
                          {"name": "variable", "varname": "nhet1", 'op': 'equal', 'expression': '"count(het_1)"',
                           'comment': 'total number of regular heterotrophs'},

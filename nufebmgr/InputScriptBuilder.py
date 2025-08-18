@@ -19,11 +19,11 @@ class InputScriptBuilder:
         else:
             self.config_vals['microbes_and_groups'][0]['bug_groups'] = []
 
-    def build_bug_groups(self, group_assignemnts, active_taxa, lysis_groups, keep_dead=True):
-        self.group_assignments = group_assignemnts
+    def build_bug_groups(self, group_assignments, active_taxa, lysis_groups, keep_dead=True):
+        self.group_assignments = group_assignments
         self.clear_bug_groups(keep_dead)
         all_groups = {**active_taxa, **lysis_groups}
-        for k, v in group_assignemnts.items():
+        for k, v in group_assignments.items():
             entry = {'name': 'group', 'group_name': k, 'param': 'type', 'group_num': v}
             if 'description' in all_groups[k]:
                 entry['comment'] = f'# {all_groups[k]["description"]}'
@@ -397,7 +397,7 @@ class InputScriptBuilder:
              'd1': 'con', 'd2': 'rea', 'd3': 'den', 'd4': 'gro', 'comment': ''},
         ]
 
-    def add_thermo_output(self,track_abs,timestep):
+    def add_thermo_output(self,track_abs, timestep, track_vol = False):
         self.config_vals['computation_output'][0]['thermo_output'] = []
         self.config_vals['computation_output'][0]['thermo_output'].append({'name': 'Output to screen'})
         thermo_style = {'name': 'thermo_style',
@@ -409,16 +409,21 @@ class InputScriptBuilder:
             for k,v in self.group_assignments.items():
                 thermo_style[f'abs_var_{k}'] = f'v_n_{k}'
                 thermo_style[f'rel_var_{k}'] = f'v_ra_{k}'
+
+        if track_vol:
+            for k,v in self.group_assignments.items():
+                thermo_style[f'vol_{k}'] = f'c_vol_{k}'
+
         self.config_vals['computation_output'][0]['thermo_output'].append(thermo_style)
         self.config_vals['computation_output'][0]['thermo_output'].append({'name':'thermo', 'step':timestep})
 
-    def enable_csv_output(self,tracking_abs,tracking_biomass_pct):
+    def enable_csv_output(self,track_abs,track_biomass_pct, track_vol=False):
         csv_vars = ['current_step']
         csv_header=['step']
-        if tracking_abs:
+        if track_biomass_pct:
             csv_vars.append('biomass_pct')
             csv_header.append('percent_vol_biomass')
-        if tracking_abs:
+        if track_abs:
             for k, v in self.group_assignments.items():
                 # abs abundance
                 csv_vars.append(f'n_{k}')
@@ -426,6 +431,10 @@ class InputScriptBuilder:
                 # rel abundance
                 csv_vars.append(f'ra_{k}')
                 csv_header.append(f'{k}_relative_abundance')
+        if track_vol:
+            for k,v in self.group_assignments.items():
+                csv_vars.append(f'var_vol_{k}')
+                csv_header.append(f'{k}_volume')
 
         var_strings=[]
         for csv_var in csv_vars:
@@ -441,18 +450,30 @@ class InputScriptBuilder:
 
         self.config_vals['computation_output'][0]['csv_output']=csv_dict
 
-            # fix
-            # volcsv
-            # all
-            # print
-            # 100
-            # "${step},${simvol},${fillpct},${bug1_relab},${bug2_relab}" &
-            # screen
-            # no &
-            # file
-            # "cell_rel_volumes.csv" &
-            # title
-            # "step,simulation_volume,fill_percent,bug1_relab,bug2_relab"
+
+    def add_vol_vars(self) -> None:
+        """
+        Populates ``config_vals`` with the computes used to track volume specifying each taxon will have volume computed
+
+        Clears and rewrites ``config_vals['computation_output'][0]['vol_track']`` based on the contents of
+        ``group_assignments``
+
+        """
+        self.config_vals['computation_output'][0]['vol_track'] = [{'name': 'Compute per-taxa volumes'},]
+        for k, v in self.group_assignments.items():
+            entry = {}
+            entry['command'] = 'compute'
+            entry['name'] = f'vol_{k}'
+            entry['group'] = k
+            entry['fix_loc'] = 'nufeb/volume'
+            self.config_vals['computation_output'][0]['vol_track'].append(entry)
+            # create an equal val for some things, like csv output
+            entry = {}
+            entry['command'] = 'variable'
+            entry['name'] = f'var_vol_{k}'
+            entry['op'] = 'equal'
+            entry['to'] = f'"c_vol_{k}"'
+            self.config_vals['computation_output'][0]['vol_track'].append(entry)
 
     def add_abs_vars(self):
         self.config_vals['computation_output'][0]['ab_track'] = []

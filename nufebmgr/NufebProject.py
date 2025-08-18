@@ -160,6 +160,7 @@ class NufebProject:
         self.infer_substrates=False
         self.elastic_bl=None
         self.group_assignments = {}
+        self.track_vol = False
 
 
     # __enter__ and __exit__ for handling using project as context
@@ -551,7 +552,7 @@ class NufebProject:
             self._infer_substrates()
 
         isb.build_substrate_grid(self.substrates, self.sim_box, self.boundary_scenario, self.forced_substrate_grid_size)
-        if(self.elastic_bl is not None):
+        if self.elastic_bl is not None:
             if self.boundary_scenario != "bioreactor":
                 raise ValueError("An elastic boundary layer was set for a non-bioreactor scenario. Only bioreactor scenarios support elastic boundary layers at this time")
             isb.build_post_physical(self.elastic_bl)
@@ -565,19 +566,22 @@ class NufebProject:
         isb.build_lysis(self.lysis_groups)
         isb.build_t6ss(self.t6ss_attackers, self.t6ss_vulns, self.seed)
 
-        if(self.track_abs):
+        if self.track_abs:
             isb.add_abs_vars()
 
-        if(self.thermo_output):
-            isb.add_thermo_output(self.track_abs, self.thermo_timestep)
+        if self.track_vol:
+            isb.add_vol_vars()
+
+        if self.thermo_output:
+            isb.add_thermo_output(self.track_abs, self.thermo_timestep, self.track_vol)
 
         isb.add_hdf5_output(self.hdf5_dump_specs)
 
-        if (self.write_vtk):
+        if self.write_vtk:
             isb.add_vtk_output()
 
-        if(self.write_csv):
-            isb.enable_csv_output(self.track_abs, self.stop_condition=="percent biomass")
+        if self.write_csv:
+            isb.enable_csv_output(self.track_abs, self.stop_condition=="percent biomass", self.track_vol)
 
         valid_stops = ["percent biomass", "runtime"]
         if self.stop_condition not in valid_stops:
@@ -592,7 +596,6 @@ class NufebProject:
 
         if self.max_biofilm_height is not None:
             isb.limit_biofilm_height(self.max_biofilm_height)
-
 
         return isb.generate()
 
@@ -678,9 +681,23 @@ class NufebProject:
     #     output_image_path = 'output_image.png'
     #     cv2.imwrite(output_image_path, output_image)
 
+    def set_track_abs(self, do_track: bool = True) -> None:
+        """
+        Enable tracking abundance (absolute and relative) for each taxon.
+        This will affect various outputs, such as thermo and CSV
 
-    def set_track_abs(self, do_track=True):
+        :param do_track: Should tracking occur or notnot. Default to True.
+        """
         self.track_abs = do_track
+
+    def set_track_vol(self, do_track: bool= True) -> None:
+        """
+        Enable tracking biomass volume for each taxon.
+        This will affect various outputs, such as thermo and CSV
+
+        :param do_track: Should tracking occur or not. Default to True.
+        """
+        self.track_vol = do_track
 
     def enable_thermo_output(self, timestep=1):
         self.thermo_output=True

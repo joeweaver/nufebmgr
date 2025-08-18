@@ -255,3 +255,36 @@ def test_multi_hdf5():
 
     isb.add_hdf5_output([dump_A, dump_B, dump_C])
     assert isb.config_vals['computation_output'][0]['hdf5_output'] == expected_ABC
+
+def test_add_vol_computes():
+    isb = InputScriptBuilder()
+
+    # should start with empty values
+    assert isb.config_vals['computation_output'][0]['vol_track'] == []
+
+    isb.group_assignments = {'taxon_a': '1', 'taxon_b': '2'}
+    isb.add_vol_vars()
+    expected_a = [{'name': 'Compute per-taxa volumes'},
+                {'command': 'compute', 'name': 'vol_taxon_a', 'group': 'taxon_a', 'fix_loc': 'nufeb/volume'},
+                {'command': 'variable', 'name': 'var_vol_taxon_a', 'op': 'equal', 'to': '"c_vol_taxon_a"'},
+                {'command': 'compute', 'name': 'vol_taxon_b', 'group': 'taxon_b', 'fix_loc': 'nufeb/volume'},
+                {'command': 'variable', 'name': 'var_vol_taxon_b', 'op': 'equal', 'to': '"c_vol_taxon_b"'},]
+
+    assert isb.config_vals['computation_output'][0]['vol_track'] == expected_a
+
+    isb = InputScriptBuilder()
+
+    # should start with empty values
+    assert isb.config_vals['computation_output'][0]['vol_track'] == []
+
+    isb.group_assignments = {'bug3': '3', 'bug4': '4', 'bugn': 'n'}
+    isb.add_vol_vars()
+    expected_b = [{'name': 'Compute per-taxa volumes'},
+                  {'command': 'compute', 'name': 'vol_bug3', 'group': 'bug3', 'fix_loc': 'nufeb/volume'},
+                  {'command': 'variable', 'name': 'var_vol_bug3', 'op': 'equal', 'to': '"c_vol_bug3"'},
+                  {'command': 'compute', 'name': 'vol_bug4', 'group': 'bug4', 'fix_loc': 'nufeb/volume'},
+                  {'command': 'variable', 'name': 'var_vol_bug4', 'op': 'equal', 'to': '"c_vol_bug4"'},
+                  {'command': 'compute', 'name': 'vol_bugn', 'group': 'bugn', 'fix_loc': 'nufeb/volume'},
+                  {'command': 'variable', 'name': 'var_vol_bugn', 'op': 'equal', 'to': '"c_vol_bugn"'},]
+
+    assert isb.config_vals['computation_output'][0]['vol_track'] == expected_b
