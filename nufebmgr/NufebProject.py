@@ -161,6 +161,7 @@ class NufebProject:
         self.elastic_bl=None
         self.group_assignments = {}
         self.track_vol = False
+        self.spatial_distribution = "even"
 
 
     # __enter__ and __exit__ for handling using project as context

@@ -21,8 +21,10 @@ def test_initialization():
     assert project is not None
 
     # defaults
+    # TODO complete this
     assert project.track_abs == False
     assert project.track_vol == False
+    assert project.spatial_distribution == "even"
 
 def test_error_on_assign_taxa_not_all_taxa_have_entries_or_compositions():
     def setup_local(taxa_filename:str) -> NufebProject:
