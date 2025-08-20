@@ -153,8 +153,7 @@ class NufebProject:
         self.biomass_percent = None
         self.write_csv = False
         self.max_biofilm_height = None
-        self.hdf5_dump_specs = [HDF5DumpSpec(dumpname ="dump.h5", dumpdir ="hdf5", nsteps =1,
-                           dump_bugs =BugDumpSpec().hdf5_vars(), dump_chems =ChemDumpSpec().hdf5_vars())]
+        self.hdf5_dump_specs = []
         self.write_vtk = True
         self.forced_substrate_grid_size=None
         self.infer_substrates=False

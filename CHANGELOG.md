@@ -15,6 +15,8 @@
 * Now required to explicitly map taxa to group IDs using 1set_taxa_groups``
   * See issue at https://github.com/joeweaver/nufebmgr/issues/4
 * Possibly breaking. Bugs now init to 50-90% of their maximum diameter (uniform distribution)
+* Possibly breaking. Even spatial distribution is now a default, rather than having no default
+* Possibly breaking. No longer default dumping a HDF5 file every 1 s
 
 ## New functions
 
@@ -28,6 +30,11 @@
   * optionally as part of the new convenience function ``run_for_N_hours``
   * note that ``set_runtime`` is now more properly named ``run_for_N_steps``
 * Can now specify multiple, custom HDF5 dumps, see ``add_custom_hdf5_output``
+* Can now track per-taxa biomass volume
+* Introduction of ``nufeb_spatial_anaysis`` still a WIP
+
+## Fixes
+* CVS output now reliable
 
 ## Other
 
