@@ -1,10 +1,11 @@
 import warnings
 import polars as pl
 import numpy as np
+from numpy.core.multiarray import ndarray
 from sklearn.neighbors import KDTree
 
 def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
-                     xlen: float=None, ylen:float=None, zlen:float=None) -> dict[str, list[int]]:
+                     xlen: float=None, ylen:float=None, zlen:float=None) -> dict[int, list[int]]:
     """
     Find all neighbours for each point within a radius.
     Points are specified as their index into the dataframe.to_numpy()
@@ -22,9 +23,9 @@ def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
     :param xlen: x-dimension length (required for 'xy' periodicity)
     :param ylen: x-dimension length (required for 'xy' periodicity)
     :param zlen: z-dimension length (not yet required )
-    :return: A dictionary of lists. Each key is the index of a point in the dataframe. The list items are the indices
+    :return: A dictionary of lists. Each key is the index (np.int64) of a point in the dataframe. The list items are the indices
     of neighbors within the search radius, accounting for periodicity. The items are sorted in order of increasing
-    distance
+    distance. In the case of matching distance, there is no guarantee of order.
     """
     # others may be supported in the future
     periodicities = ["none", "xy"]
@@ -43,7 +44,7 @@ def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
         for i, index in enumerate(indices):
             ilist = index.tolist()
             ilist.remove(i)
-            neighbor_lists[i] = ilist
+            neighbor_lists[i] = [int(x) for x in ilist]
         return neighbor_lists
     if periodicity == "xy":
         if xlen is None and ylen is None:
@@ -58,6 +59,14 @@ def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
             raise ValueError(f'Periodicity of "xy" specified but xlen is not > 0. xlen: {xlen}')
         if ylen <= 0:
             raise ValueError(f'Periodicity of "xy" specified but ylen is not > 0. ylen: {ylen}')
+        max_x = df.select(['x']).max().item()
+        max_y = df.select(['y']).max().item()
+        if xlen < max_x and ylen < max_y:
+            raise ValueError(f'xlen, ylen are {xlen}, {ylen}, lower than max values in dataset:{max_x} {max_y}')
+        if xlen < max_x:
+            raise ValueError(f'xlen is specified to {xlen}, lower than max x-value of points in dataset: {max_x}')
+        if ylen < max_y:
+            raise ValueError(f'ylen is specified to {ylen}, lower than max y-value of points in dataset: {max_y}')
         offsets = np.array([
             [0, 0],
             [xlen, 0],
@@ -79,6 +88,13 @@ def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
         tiled_coords = np.vstack(tiled_coords_list)
         tree = KDTree(tiled_coords)
         indices, dists = tree.query_radius(coords, r=radius, return_distance=True, sort_results=True)
+        results = [list(dict.fromkeys((arr % coords.shape[0]).astype(int))) for arr in indices]
+        neighbor_lists = {}
+        for i, index in enumerate(results):
+            if i in index:
+                index.remove(i)
+            neighbor_lists[i] = [int(x) for x in index]
+        return neighbor_lists
         pass
     else:
         raise ValueError(f'Unrecognized periodicity: {periodicity}. Must be one of {",".join(periodicities)}')
