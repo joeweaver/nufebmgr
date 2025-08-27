@@ -23,7 +23,7 @@ def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
     :param xlen: x-dimension length (required for 'xy' periodicity)
     :param ylen: x-dimension length (required for 'xy' periodicity)
     :param zlen: z-dimension length (not yet required )
-    :return: A dictionary of lists. Each key is the index (np.int64) of a point in the dataframe. The list items are the indices
+    :return: A dictionary of lists. Each key is an ID of a point in the dataframe. The list items are the IDs
     of neighbors within the search radius, accounting for periodicity. The items are sorted in order of increasing
     distance. In the case of matching distance, there is no guarantee of order.
     """
@@ -34,7 +34,8 @@ def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
     if periodicity not in periodicities:
         raise ValueError(f'Unrecognized periodicity: {periodicity}. Must be one of {",".join(periodicities)}')
 
-    coords = df.select(['x','y','z']).to_numpy()
+    coords = df.select(['x', 'y', 'z']).to_numpy()
+    ids = df.select(['id']).to_numpy()
     if periodicity == "none":
         if xlen is not None or ylen is not None or zlen is not None:
             warnings.warn("Either xlen, ylen, or zlen is set but is not needed for no periodicity. Are you sure you're asking for what you're expecting?", UserWarning)
@@ -43,8 +44,9 @@ def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
         neighbor_lists = {}
         for i, index in enumerate(indices):
             ilist = index.tolist()
-            ilist.remove(i)
-            neighbor_lists[i] = [int(x) for x in ilist]
+            if i in ilist:
+                ilist.remove(i)
+            neighbor_lists[int(ids[i][0])] = [int(ids[x][0]) for x in ilist]
         return neighbor_lists
     if periodicity == "xy":
         if xlen is None and ylen is None:
@@ -93,8 +95,7 @@ def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
         for i, index in enumerate(results):
             if i in index:
                 index.remove(i)
-            neighbor_lists[i] = [int(x) for x in index]
+            neighbor_lists[int(ids[i][0])] = [int(ids[x][0]) for x in index]
         return neighbor_lists
-        pass
     else:
         raise ValueError(f'Unrecognized periodicity: {periodicity}. Must be one of {",".join(periodicities)}')

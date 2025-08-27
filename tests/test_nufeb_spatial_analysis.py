@@ -12,6 +12,7 @@ df_simple = pl.DataFrame({
     "y": [0.0, 1.0, 2.0, 4.0],
     "z": [0.0, 0.0, 0.0, 5.0],
 })
+
 # for easy reference, within df_simple, distances, by ID:
     # 1 to 2: 1.41421356
     # 1 to 3: 3.6055128
@@ -22,6 +23,13 @@ df_simple = pl.DataFrame({
 
 df_neighbor_periodicity = pl.DataFrame({
     'id': [1, 2, 3, 4, 5],
+    'group': [1, 1, 2, 2, 3],
+    'x': [0.1, 4.9, 2.5, 0.2, 4.8],
+    'y': [0.1, 0.2, 2.5, 4.8, 7.9],
+    'z': [0.0, 0.0, 1.0, 0.5, 0.5]})
+
+df_neighbor_periodicity_non_contig_id = pl.DataFrame({
+    'id': [14, 12, 2, 25, 4],
     'group': [1, 1, 2, 2, 3],
     'x': [0.1, 4.9, 2.5, 0.2, 4.8],
     'y': [0.1, 0.2, 2.5, 4.8, 7.9],
@@ -38,7 +46,6 @@ df_neighbor_periodicity = pl.DataFrame({
 
 # more points in site. intended to be x=6, y=5 distance units
 # intentionally set up to exercise boundary conditions in xy, especially along diagonals. note all z=0
-# group is not yet final
 df_neighbor_periodicity_two = pl.DataFrame({
     'id': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     'group': [1, 1, 2, 2, 3, 1, 2, 2, 1, 3, 1, 1],
@@ -51,21 +58,6 @@ def test_smoke():
     assert coords['x'][1] == 1.0
     assert coords['y'][2] == 2.0
     assert coords['z'][3] == 5.0
-
-def test_index_gaurantee():
-    # just reassuring ourselves that we can map back to id and group
-    # some of this also serves a reminders on using kdtree, etc
-
-    coords = df_simple.select(["x", "y", "z"]).to_numpy()
-    kd_tree = KDTree(coords, metric="euclidean")
-
-    #get nearest neighbor of ID 3
-    row_for_ID3 = 2
-    n_nearest = 1
-    dist, ind = kd_tree.query(coords[row_for_ID3].reshape(1, -1),n_nearest+1)
-    row_for_nearest = df_simple[int(ind[0][1])]
-    nearest_id = row_for_nearest['id'][0]
-    assert nearest_id == 2
 
 def test_neighbors_radius_unsupported_periodicity():
     periodicities = ["none", "xy"]
@@ -103,27 +95,37 @@ def test_neighbors_radius_non_periodic():
     #        [4.72757866, 6.59545298, 3.29089653, 0.        , 5.5470713 ],
     #        [9.12030701, 7.71686465, 5.89067059, 5.5470713 , 0.        ]])
     neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='none')
-    expected = { 0: [2, 3, 1],
-                 1: [2, 0],
-                 2: [3, 1, 0, 4],
-                 3: [2, 0, 4],
-                 4: [3, 2]}
+    expected = { 1: [3, 4, 2],
+                 2: [3, 1],
+                 3: [4, 2, 1, 5],
+                 4: [3, 1, 5],
+                 5: [4, 3]}
     assert neighbour_lists == expected
 
     neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity_two, radius=3, periodicity='none')
-    expected = {0: [1, 3, 4, 5, 7],
-                1: [0, 3, 4, 5, 7, 8],
-                2: [6],
-                3: [0, 1, 4, 5, 7, 8],
-                4: [5, 1, 7, 3, 0, 8],
-                5: [7, 4, 8, 1, 3, 0, 10, 9],
-                6: [2, 11, 8],
-                7: [5, 8, 4, 10, 3, 1, 0, 9],
-                8: [7, 5, 4, 10, 6, 1, 3],
-                9: [10, 7, 5],
-                10: [9, 7, 8, 5],
-                11: [6]
+    expected = {1: [2, 4, 5, 6, 8],
+                2: [1, 4, 5, 6, 8, 9],
+                3: [7],
+                4: [1, 2, 5, 6, 8, 9],
+                5: [6, 2, 8, 4, 1, 9],
+                6: [8, 5, 9, 2, 4, 1, 11, 10],
+                7: [3, 12, 9],
+                8: [6, 9, 5, 11, 4, 2, 1, 10],
+                9: [8, 6, 5, 11, 7, 2, 4],
+                10: [11, 8, 6],
+                11: [10, 8, 9, 6],
+                12: [7]
                 }
+    assert neighbour_lists == expected
+
+    # using non-contiguous, out of numeric order id column to check if ids are correctly preserved
+    # For ref:      'id': [14, 12, 2, 25, 4],
+    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity_non_contig_id, radius=6, periodicity='none')
+    expected = {14: [2, 25, 12],
+                12: [2, 14],
+                2: [25, 12, 14, 4],
+                25: [2, 14, 4],
+                4: [25, 2]}
     assert neighbour_lists == expected
     ## different setup, just to be careful
 
@@ -205,36 +207,47 @@ def test_neighbors_radius_periodic_xy():
     # 4 1.3341664   1.396424    4.3011626   3.1256999   0
 
     neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=3.5, periodicity='xy', xlen=5, ylen=9)
-    expected = { 0: [1, 4],
-                 1: [0, 4, 2],
-                 2: [3, 1],
+    expected = { 1: [2, 5],
+                 2: [1, 5, 3],
                  3: [4, 2],
-                 4: [0, 1, 3]}
+                 4: [5, 3],
+                 5: [1, 2, 4]}
     assert neighbour_lists == expected
 
     # tighter radius
     neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=2, periodicity='xy', xlen=5, ylen=9)
-    expected = { 0: [1, 4],
-                 1: [0, 4],
-                 2: [],
+    expected = { 1: [2, 5],
+                 2: [1, 5],
                  3: [],
-                 4: [0, 1]}
+                 4: [],
+                 5: [1, 2]}
+    assert neighbour_lists == expected
+
+    # using non-contiguous, out of numeric order id column to check if ids are correctly preserved
+    # For ref:      'id': [14, 12, 2, 25, 4],
+    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity_non_contig_id, radius=2, periodicity='xy', xlen=5, ylen=9)
+    expected = { 14: [12, 4],
+                 12: [14, 4],
+                 2: [],
+                 25: [],
+                 4: [14, 12]}
     assert neighbour_lists == expected
 
     # different setup, just to be extra careful
     neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity_two, radius=3, periodicity='xy', xlen=6, ylen=5)
-    expected = { 0: [3, 1, 2, 9, 11, 4, 10, 6, 5, 7],
-                 1: [0, 3, 9, 4, 10, 2, 5, 11, 6, 7, 8],
-                 2: [0, 11, 3, 9, 6, 1, 4, 10, 5],
-                 3: [0, 1, 2, 6, 9, 4, 11, 5, 7, 10, 8],
-                 4: [5, 1, 3, 7, 10, 0, 8, 9, 2, 6, 11],
-                 5: [7, 4, 8, 1, 3, 0, 10, 6, 9, 2],
-                 6: [3, 2, 0, 1, 11, 5, 7, 8, 4, 9],
-                 7: [5, 8, 4, 10, 3, 1, 0, 9, 6],
-                 8: [7, 5, 4, 10, 6, 1, 3],
-                 9: [0, 11, 1, 2, 3, 10, 4, 7, 6, 5],
-                 10: [1, 4, 9, 0, 7, 3, 8, 5, 11, 2],
-                 11: [9, 2, 0, 3, 1, 10, 6, 4]}
+    expected = {1: [4, 2, 3, 10, 12, 5, 11, 7, 6, 8],
+                2: [1, 4, 10, 5, 11, 3, 6, 12, 7, 8, 9],
+                3: [1, 12, 4, 10, 7, 2, 5, 11, 6],
+                4: [1, 2, 3, 7, 10, 5, 12, 6, 8, 11, 9],
+                5: [6, 2, 4, 8, 11, 1, 9, 10, 3, 7, 12],
+                6: [8, 5, 9, 2, 4, 1, 11, 7, 10, 3],
+                7: [4, 3, 1, 2, 12, 6, 8, 9, 5, 10],
+                8: [6, 9, 5, 11, 4, 2, 1, 10, 7],
+                9: [8, 6, 5, 11, 7, 2, 4],
+                10: [1, 12, 2, 3, 4, 11, 5, 8, 7, 6],
+                11: [2, 5, 10, 1, 8, 4, 9, 6, 12, 3],
+                12: [10, 3, 1, 4, 2, 11, 7, 5]}
+
     assert neighbour_lists == expected
 
 @pytest.mark.skip(reason="extensive varied periodic bc checks to be sure")
@@ -248,18 +261,77 @@ def test_more_periodic_dumbness():
 def test_neighbors_radius_edge():
     pass
 
-@pytest.mark.skip(reason="single query for neighbours")
-def test_neighbors_radius_single():
-    pass
 
-@pytest.mark.skip(reason="all query for neighbours")
-def test_neighbours_radius_all():
-    pass
 
 @pytest.mark.skip(reason="n neighbors")
 def test_n_neighbors():
     pass
 
 @pytest.mark.skip(reason="nearest of type")
-def test_nearest_of_type():
+def test_distance_to_nearest_of_group():
     pass
+
+@pytest.mark.skip(reason="nearest of type")
+def test_local_population_structure():
+    # nb got the column ids screwed up when reading autogenerated
+    expected = pl.DataFrame({
+        'id': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        '1': [4, 5, 5, 6, 6, 4, 5, 5, 3, 5, 5, 3],
+        '2': [4, 4, 2, 3, 4, 4, 3, 2, 3, 4, 3, 3],
+        '3': [2, 2, 2, 2, 1, 2, 2, 2, 1, 1, 2, 2]})
+
+
+    # Tallied by hand. ID, group type of neighbors, sorted, counts
+    #1:  2 1 2 3 1 3 1 2 1 2     -> 1111   2222   33   -> 4 4 2
+    #2:  1 2 3 3 1 2 1 1 2 2 1   -> 11111  2222   33   -> 5 4 2
+    #3:  1 1 2 3 2 1 3 1 1       -> 11111  22     33   -> 5 2 2
+    #4:  1 1 2 2 3 3 1 1 2 1 1   -> 111111 222    33   -> 6 3 2
+    #5:  1 1 2 2 1 1 1 3 2 2 1   -> 111111 2222   3    -> 6 4 1
+    #6:  2 3 1 1 2 1 1 2 3 2     -> 1111   2222   33   -> 4 4 2
+    #7:  2 2 1 1 1 1 2 1 3 3     -> 11111  222    33   -> 5 3 2
+    #8:  1 1 3 1 2 1 1 3 2       -> 11111  22     33   -> 5 2 2
+    #9:  2 1 3 1 2 1 2           -> 111    222    3    -> 3 3 1
+    #10: 1 1 1 2 2 1 3 2 2 1     -> 11111  2222   3    -> 5 4 1
+    #11: 1 3 3 1 2 2 1 1 1 2     -> 11111  222    33   -> 5 3 2
+    #12: 3 2 1 2 1 1 2 3         -> 111    222    33   -> 3 3 2
+
+    # neighbors within 3, by ID
+    # based on df_neighbor_periodicity_two, but using id lookup
+    neighbor_ids = {1: [4, 2, 3, 10, 12, 5, 11, 7, 6, 8],
+                2: [1, 4, 10, 5, 11, 3, 6, 12, 7, 8, 9],
+                3: [1, 12, 4, 10, 7, 2, 5, 11, 6],
+                4: [1, 2, 3, 7, 10, 5, 12, 6, 8, 11, 9],
+                5: [6, 2, 4, 8, 11, 1, 9, 10, 3, 7, 12],
+                6: [8, 5, 9, 2, 4, 1, 11, 7, 10, 3],
+                7: [4, 3, 1, 2, 12, 6, 8, 9, 5, 10],
+                8: [6, 9, 5, 11, 4, 2, 1, 10, 7],
+                9: [8, 6, 5, 11, 7, 2, 4],
+                10: [1, 12, 2, 3, 4, 11, 5, 8, 7, 6],
+                11: [2, 5, 10, 1, 8, 4, 9, 6, 12, 3],
+                12: [10, 3, 1, 4, 2, 11, 7, 5]}
+
+    # TODO lookup id
+    rows = [(k, n) for k, vals in neighbor_ids.items() for n in vals]
+    neighbor_df = pl.DataFrame(rows, schema=["id", "neighbor_id"])
+    df = df_neighbor_periodicity_two
+    neighbor_df = neighbor_df.join(
+        df.select(["id", "group"]),
+        left_on="neighbor_id",
+        right_on="id",
+        how="left"
+    ).rename({"group": "neighbor_group"})
+
+    counts = (
+        neighbor_df
+        .group_by(["id", "neighbor_group"])
+        .count()
+        .rename({"count": "n"})
+    )
+
+    wide = counts.pivot(
+        values="n",
+        index="id",
+        columns="neighbor_group"
+    ).fill_null(0)
+
+    assert local_pop == expected
