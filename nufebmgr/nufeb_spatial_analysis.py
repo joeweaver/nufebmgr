@@ -99,3 +99,41 @@ def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
         return neighbor_lists
     else:
         raise ValueError(f'Unrecognized periodicity: {periodicity}. Must be one of {",".join(periodicities)}')
+
+def local_population_structure(df: pl.DataFrame, radius: float, periodicity: str,
+                     xlen: float=None, ylen:float=None, zlen:float=None) -> pl.DataFrame:
+    """
+    Determine the population structure around a bug.
+    :param df: a polars dataframe with columns x, y, and z f
+    :param radius: Radius within which to search
+    :param periodicity: Either "none" or "xy". "xy" indicates the x and y directions wrap around in a toroidal geometry
+    :param xlen: x-dimension length (required for 'xy' periodicity)
+    :param ylen: x-dimension length (required for 'xy' periodicity)
+    :param zlen: z-dimension length (not yet required )
+    :return: A polars dataframe with n+1 columns. One column lists the ID of a bug. There other n columns are for each
+    bug type (group).  The values in each column are the counts of bugs of that type within the radius of bug ID (or 0
+    if none). There is no guarantee of order.
+    """
+    neighbor_ids = neighbors_radius(df, radius, periodicity, xlen, ylen, zlen)
+    rows = [(k, n) for k, vals in neighbor_ids.items() for n in vals]
+    neighbor_df = pl.DataFrame(rows, schema=["id", "neighbor_id"])
+    neighbor_df = neighbor_df.join(
+        df.select(["id", "group"]),
+        left_on="neighbor_id",
+        right_on="id",
+        how="left"
+    ).rename({"group": "neighbor_group"})
+
+    counts = (
+        neighbor_df
+        .group_by(["id", "neighbor_group"])
+        .count()
+        .rename({"count": "n"})
+    )
+
+    wide = counts.pivot(
+        values="n",
+        index="id",
+        columns="neighbor_group"
+    ).fill_null(0).sort('id')
+    return wide
