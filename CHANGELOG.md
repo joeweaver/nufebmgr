@@ -29,12 +29,13 @@
   * directly via ``set_biological_timestep_size_s``
   * optionally as part of the new convenience function ``run_for_N_hours``
   * note that ``set_runtime`` is now more properly named ``run_for_N_steps``
-* Can now specify multiple, custom HDF5 dumps, see ``add_custom_hdf5_output``
+* Can now specify multiple, custom HDF5 dumps, see ``add_custom_df5_output``
 * Can now track per-taxa biomass volume
 * Introduction of ``nufeb_spatial_anaysis`` still a WIP
   * Handles non-periodic and periodic in x-y plan 
   * Can get local population structure via ``local_population_structure``
   * Can get IDs of all neighbours via ``neighbors_radius``
+  * Can get the nearest neigbhor and distance of each group via ``distance_to_each_group``
 
 ## Fixes
 * CVS output now reliable

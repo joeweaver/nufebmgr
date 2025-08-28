@@ -159,7 +159,6 @@ def test_neighbors_radius_periodic_xy_dim_checks():
         nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='xy', xlen=1, ylen=-2)
     assert f'Periodicity of "xy" specified but ylen is not > 0. ylen: -2' in str(excinfo.value)
 
-
 def test_min_xyz_len():
     #xlen or ylen not greater than max"
     max_x = 4.9
@@ -262,15 +261,101 @@ def test_more_periodic_dumbness():
 def test_neighbors_radius_edge():
     pass
 
-
-
 @pytest.mark.skip(reason="n neighbors")
 def test_n_neighbors():
     pass
 
-@pytest.mark.skip(reason="nearest of type")
-def test_distance_to_nearest_of_group():
+@pytest.mark.skip(reason="bad periodicity error in nearest_of_each_group")
+def test_distance_to_nearest_of_each_group_bad_periodicity():
     pass
+
+@pytest.mark.skip(reason="bad periodicity lens in nearest_of_each_group")
+def test_distance_to_nearest_of_each_group_bad_periodicity_lens():
+    pass
+
+# TODO wrap all such of these into a pytest.mark.paramterize
+@pytest.mark.skip(reason="periodicity validation")
+def test_periodicity_validation():
+    pass
+
+def test_distance_to_nearest_of_each_group_periodic():
+    # values calculated using test data spreadsheet
+    expected = pl.DataFrame({
+        'id': pl.Series([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], dtype=pl.Int64),
+        'type-1-dist': pl.Series([0.5, 0.5, 1.0, 0.5, 1, 1.118033988749895, 1.8027756377319946, 0.5, 1.118033988749895, 1, 1.4142135623730951, 1.4142135623730951], dtype=pl.Float64),
+        'type-1-id': pl.Series([2, 1, 1, 1, 6, 9, 1, 6, 6, 1, 2, 1], dtype=pl.Int64),
+        'type-2-dist': pl.Series([0.5, 0.7071, 1.118033988749895, 1.118033988749895, 1.5, 0.5, 1.414213562370951, 2.1213203435596424, 1.0, 1.414213562370951, 2.0, 1.0], dtype=pl.Float64),
+        'type-2-id': pl.Series([4, 4, 4, 3, 4, 8, 4, 4, 8, 3, 8, 3], dtype=pl.Int64),
+        'type-3-dist': pl.Series([1, 1.118033988749895, 1.414213562370951, 1.5, 2.1213203435596424, 1, 2.6926, 1.5, 1.8027756377319946, 2.1213203435596424, 1.5, 1.0], dtype=pl.Float64),
+        'type-3-id': pl.Series([10, 5, 10, 5, 10, 5, 5, 5, 5, 5, 5, 10], dtype=pl.Int64),})
+    result = nu_spa.distance_to_each_group(df_neighbor_periodicity_two,periodicity=nu_spa.Periodicity.XY, xlen=6, ylen=5)
+    assert_frame_equal(result, expected, check_column_order=False, check_exact=False)
+
+def test_distance_to_nearest_of_each_group_one_bug_in_a_group():
+    # This is currently a repeat of the non-contig ID test. It is repeated here to show explicit intent.
+    # During the non-contig testing the special case of 'only one bug in a group' was highlighted and the
+    # underlying code was changed to follow the convention that a bug can be its nearest neighbor of group
+    # (with dist 0) if it is the only one in that group.
+    # values calculated using test data spreadsheet
+    expected_non_periodic = pl.DataFrame({
+        'id': pl.Series([14, 12, 2, 25, 4], dtype=pl.Int64),
+        'type-1-dist': pl.Series([4.80104155366, 4.80104155366, 3.47131, 4.72757, 7.71686], dtype=pl.Float64),
+        'type-1-id': pl.Series([12, 14, 12, 14, 12], dtype=pl.Int64),
+        'type-2-dist': pl.Series([3.53836, 3.47131, 3.29089, 3.29089, 5.54707], dtype=pl.Float64),
+        'type-2-id': pl.Series([2, 2, 25, 2, 25], dtype=pl.Int64),
+        'type-3-dist': pl.Series([9.12030, 7.71686, 5.89067, 5.54707, 0], dtype=pl.Float64),
+        'type-3-id': pl.Series([4, 4, 4, 4, 4], dtype=pl.Int64),})
+    result = nu_spa.distance_to_each_group(df_neighbor_periodicity_non_contig_id,periodicity=nu_spa.Periodicity.NONE)
+    assert_frame_equal(result, expected_non_periodic, check_column_order=False, check_exact=False)
+
+    expected_periodic = pl.DataFrame({
+        'id': pl.Series([14, 12, 2, 25, 4], dtype=pl.Int64),
+        'type-1-dist': pl.Series([0.2236067, 0.2236067, 3.47131099, 3.33916, 0.591607978], dtype=pl.Float64),
+        'type-1-id': pl.Series([12, 14, 12, 14, 12], dtype=pl.Int64),
+        'type-2-dist': pl.Series([3.33916, 3.44963, 3.29089, 3.29089, 3.12569], dtype=pl.Float64),
+        'type-2-id': pl.Series([25, 25, 25, 2, 25], dtype=pl.Int64),
+        'type-3-dist': pl.Series([0.6164414, 0.591607978, 3.50713, 3.12569, 0], dtype=pl.Float64),
+        'type-3-id': pl.Series([4, 4, 4, 4, 4], dtype=pl.Int64),})
+    result = nu_spa.distance_to_each_group(df_neighbor_periodicity_non_contig_id,periodicity=nu_spa.Periodicity.XY, xlen=5, ylen=8)
+    assert_frame_equal(result, expected_periodic, check_column_order=False, check_exact=False)
+def test_distance_to_nearest_of_each_group_non_contig_coords():
+    # values calculated using test data spreadsheet
+    expected_non_periodic = pl.DataFrame({
+        'id': pl.Series([14, 12, 2, 25, 4], dtype=pl.Int64),
+        'type-1-dist': pl.Series([4.80104155366, 4.80104155366, 3.47131, 4.72757, 7.71686], dtype=pl.Float64),
+        'type-1-id': pl.Series([12, 14, 12, 14, 12], dtype=pl.Int64),
+        'type-2-dist': pl.Series([3.53836, 3.47131, 3.29089, 3.29089, 5.54707], dtype=pl.Float64),
+        'type-2-id': pl.Series([2, 2, 25, 2, 25], dtype=pl.Int64),
+        'type-3-dist': pl.Series([9.12030, 7.71686, 5.89067, 5.54707, 0], dtype=pl.Float64),
+        'type-3-id': pl.Series([4, 4, 4, 4, 4], dtype=pl.Int64),})
+    result = nu_spa.distance_to_each_group(df_neighbor_periodicity_non_contig_id,periodicity=nu_spa.Periodicity.NONE)
+    assert_frame_equal(result, expected_non_periodic, check_column_order=False, check_exact=False)
+
+    expected_periodic = pl.DataFrame({
+        'id': pl.Series([14, 12, 2, 25, 4], dtype=pl.Int64),
+        'type-1-dist': pl.Series([0.2236067, 0.2236067, 3.47131099, 3.33916, 0.591607978], dtype=pl.Float64),
+        'type-1-id': pl.Series([12, 14, 12, 14, 12], dtype=pl.Int64),
+        'type-2-dist': pl.Series([3.33916, 3.44963, 3.29089, 3.29089, 3.12569], dtype=pl.Float64),
+        'type-2-id': pl.Series([25, 25, 25, 2, 25], dtype=pl.Int64),
+        'type-3-dist': pl.Series([0.6164414, 0.591607978, 3.50713, 3.12569, 0], dtype=pl.Float64),
+        'type-3-id': pl.Series([4, 4, 4, 4, 4], dtype=pl.Int64),})
+    result = nu_spa.distance_to_each_group(df_neighbor_periodicity_non_contig_id,periodicity=nu_spa.Periodicity.XY, xlen=5, ylen=8)
+    assert_frame_equal(result, expected_periodic, check_column_order=False, check_exact=False)
+def test_distance_to_nearest_of_each_group_non_periodic():
+    # values calculated using test data spreadsheet
+    expected = pl.DataFrame({
+        'id': pl.Series([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], dtype=pl.Int64),
+        'type-1-dist': pl.Series([0.5, 0.5, 3.20156211871642, 0.5, 1.0, 1.1180339887499, 2.50, 0.5, 1.1180339887499, 1.500, 2.23606797749979, 3.20156211871642],
+                                 dtype=pl.Float64),
+        'type-1-id': pl.Series([2, 1, 9, 1, 6, 9, 12, 6, 6, 11, 9, 9], dtype=pl.Int64),
+        'type-2-dist': pl.Series([0.5, 0.7071067811865, 1.500, 2.1213203435596, 1.50, 0.5, 1.500, 2.1213203435596, 1.0, 2.5, 2.0, 2.5],
+                                 dtype=pl.Float64),
+        'type-2-id': pl.Series([4, 4, 7, 8, 4, 8, 3, 4, 8, 8, 8, 7], dtype=pl.Int64),
+        'type-3-dist': pl.Series([1.5811388300841898, 1.118033988749895, 3.5355339059327378, 1.500, 3.8078865529319543, 1.0, 3.640054944640259, 1.5, 1.8027767377, 3.80788655293, 1.5, 4.949747468],
+                                 dtype=pl.Float64),
+        'type-3-id': pl.Series([5, 5, 5, 5, 10, 5, 5, 5, 5, 5, 10, 5], dtype=pl.Int64), })
+    result = nu_spa.distance_to_each_group(df_neighbor_periodicity_two,periodicity=nu_spa.Periodicity.NONE)
+    assert_frame_equal(result, expected, check_column_order=False, check_exact=False)
 
 @pytest.mark.skip(reason="xlen, ylen, raises, etc for population structure")
 def test_local_population_structure_raises():
