@@ -18,12 +18,13 @@ class Periodicity(Enum):
     NONE = "none"
 
 
-def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
+def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: Periodicity,
                      xlen: float=None, ylen:float=None, zlen:float=None) -> dict[int, list[int]]:
     """
     Find all neighbours for each point within a radius.
     Points are specified as their index into the dataframe.to_numpy()
-    Periodicity must be specified and currently supports "none" or "xy".
+    Periodicity must be specified and currently supports "none" or "xy". It is intentionally not a default parameter
+    to prevent erroneous assumptions on behaviour.
 
     Warns if dimensions are set when not needed
 
@@ -33,7 +34,7 @@ def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
 
     :param df: a polars dataframe with columns x, y, and z f
     :param radius: Radius within which to search
-    :param periodicity: Either "none" or "xy". "xy" indicates the x and y directions wrap around in a toroidal geometry
+    :param periodicity: is the simulation non-periodic or does it wrap around in xy plane
     :param xlen: x-dimension length (required for 'xy' periodicity)
     :param ylen: x-dimension length (required for 'xy' periodicity)
     :param zlen: z-dimension length (not yet required )
@@ -41,88 +42,61 @@ def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: str,
     of neighbors within the search radius, accounting for periodicity. The items are sorted in order of increasing
     distance. In the case of matching distance, there is no guarantee of order.
     """
-    # TODO update this to use the periodicity enum
-    # TODO DRY up validation
-    # others may be supported in the future
-    periodicities = ["none", "xy"]
-    # explicit checking, combined with non-default argument is intentional. Users WILL run into issues with any
-    # default
-    if periodicity not in periodicities:
-        raise ValueError(f'Unrecognized periodicity: {periodicity}. Must be one of {",".join(periodicities)}')
+    _validate_periodicity_lens(df, periodicity, xlen, ylen, zlen)
 
     coords = df.select(['x', 'y', 'z']).to_numpy()
     ids = df.select(['id']).to_numpy()
-    if periodicity == "none":
-        if xlen is not None or ylen is not None or zlen is not None:
-            warnings.warn("Either xlen, ylen, or zlen is set but is not needed for no periodicity. Are you sure you're asking for what you're expecting?", UserWarning)
-        tree = KDTree(coords)
-        indices, dists = tree.query_radius(coords, r=radius,  return_distance = True, sort_results=True)
-        neighbor_lists = {}
-        for i, index in enumerate(indices):
-            ilist = index.tolist()
-            if i in ilist:
-                ilist.remove(i)
-            neighbor_lists[int(ids[i][0])] = [int(ids[x][0]) for x in ilist]
-        return neighbor_lists
-    if periodicity == "xy":
-        if xlen is None and ylen is None:
-            raise ValueError('Periodicity of "xy" specified but xlen and ylen are not set')
-        if xlen is None:
-            raise ValueError('Periodicity of "xy" specified but xlen is not set')
-        if ylen is None:
-            raise ValueError('Periodicity of "xy" specified but ylen is not set')
-        if xlen <= 0 and ylen <=0:
-            raise ValueError(f'Periodicity of "xy" specified but xlen and ylen not > 0. xlen: {xlen}, ylen: {ylen}')
-        if xlen <= 0:
-            raise ValueError(f'Periodicity of "xy" specified but xlen is not > 0. xlen: {xlen}')
-        if ylen <= 0:
-            raise ValueError(f'Periodicity of "xy" specified but ylen is not > 0. ylen: {ylen}')
-        max_x = df.select(['x']).max().item()
-        max_y = df.select(['y']).max().item()
-        if xlen < max_x and ylen < max_y:
-            raise ValueError(f'xlen, ylen are {xlen}, {ylen}, lower than max values in dataset:{max_x} {max_y}')
-        if xlen < max_x:
-            raise ValueError(f'xlen is specified to {xlen}, lower than max x-value of points in dataset: {max_x}')
-        if ylen < max_y:
-            raise ValueError(f'ylen is specified to {ylen}, lower than max y-value of points in dataset: {max_y}')
-        offsets = np.array([
-            [0, 0],
-            [xlen, 0],
-            [-xlen, 0],
-            [0, ylen],
-            [0, -ylen],
-            [xlen, ylen],
-            [xlen, -ylen],
-            [-xlen, ylen],
-            [-xlen, -ylen]
-        ])
-        tiled_coords_list = []
-        for dx, dy in offsets:
-            # Shift x and y by tile offsets, leave z unchanged
-            shifted = coords.copy()
-            shifted[:, 0] += dx
-            shifted[:, 1] += dy
-            tiled_coords_list.append(shifted)
-        tiled_coords = np.vstack(tiled_coords_list)
-        tree = KDTree(tiled_coords)
-        indices, dists = tree.query_radius(coords, r=radius, return_distance=True, sort_results=True)
-        results = [list(dict.fromkeys((arr % coords.shape[0]).astype(int))) for arr in indices]
-        neighbor_lists = {}
-        for i, index in enumerate(results):
-            if i in index:
-                index.remove(i)
-            neighbor_lists[int(ids[i][0])] = [int(ids[x][0]) for x in index]
-        return neighbor_lists
-    else:
-        raise ValueError(f'Unrecognized periodicity: {periodicity}. Must be one of {",".join(periodicities)}')
+    match periodicity:
+        case Periodicity.NONE:
+            tree = KDTree(coords)
+            indices, dists = tree.query_radius(coords, r=radius,  return_distance = True, sort_results=True)
+            neighbor_lists = {}
+            for i, index in enumerate(indices):
+                ilist = index.tolist()
+                if i in ilist:
+                    ilist.remove(i)
+                neighbor_lists[int(ids[i][0])] = [int(ids[x][0]) for x in ilist]
+            return neighbor_lists
+        case Periodicity.XY:
+            offsets = np.array([
+                [0, 0],
+                [xlen, 0],
+                [-xlen, 0],
+                [0, ylen],
+                [0, -ylen],
+                [xlen, ylen],
+                [xlen, -ylen],
+                [-xlen, ylen],
+                [-xlen, -ylen]
+            ])
+            tiled_coords_list = []
+            for dx, dy in offsets:
+                # Shift x and y by tile offsets, leave z unchanged
+                shifted = coords.copy()
+                shifted[:, 0] += dx
+                shifted[:, 1] += dy
+                tiled_coords_list.append(shifted)
+            tiled_coords = np.vstack(tiled_coords_list)
+            tree = KDTree(tiled_coords)
+            indices, dists = tree.query_radius(coords, r=radius, return_distance=True, sort_results=True)
+            results = [list(dict.fromkeys((arr % coords.shape[0]).astype(int))) for arr in indices]
+            neighbor_lists = {}
+            for i, index in enumerate(results):
+                if i in index:
+                    index.remove(i)
+                neighbor_lists[int(ids[i][0])] = [int(ids[x][0]) for x in index]
+            return neighbor_lists
+        case _:
+            raise ValueError(
+                f'Unrecognized periodicity: {periodicity}. Must be one of {",".join([p.value for p in Periodicity])}')
 
-def local_population_structure(df: pl.DataFrame, radius: float, periodicity: str,
+def local_population_structure(df: pl.DataFrame, radius: float, periodicity: Periodicity,
                      xlen: float=None, ylen:float=None, zlen:float=None) -> pl.DataFrame:
     """
     Determine the population structure around a bug.
     :param df: a polars dataframe with columns x, y, and z f
     :param radius: Radius within which to search
-    :param periodicity: Either "none" or "xy". "xy" indicates the x and y directions wrap around in a toroidal geometry
+    :param periodicity: is the simulation non-periodic or does it wrap around in xy plane
     :param xlen: x-dimension length (required for 'xy' periodicity)
     :param ylen: x-dimension length (required for 'xy' periodicity)
     :param zlen: z-dimension length (not yet required )

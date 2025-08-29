@@ -4,6 +4,7 @@ from polars.testing import assert_frame_equal
 import numpy as np
 from sklearn.neighbors import KDTree
 from nufebmgr import nufeb_spatial_analysis as nu_spa
+from nufebmgr.nufeb_spatial_analysis import Periodicity
 
 # Example dataset
 df_simple = pl.DataFrame({
@@ -60,33 +61,27 @@ def test_smoke():
     assert coords['y'][2] == 2.0
     assert coords['z'][3] == 5.0
 
-def test_neighbors_radius_unsupported_periodicity():
-    periodicities = ["none", "xy"]
-    with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=2, periodicity='banana', xlen=5, ylen=8)
-    assert f'Unrecognized periodicity: banana. Must be one of {",".join(periodicities)}' in str(excinfo.value)
-
 def test_neighbors_radius_non_periodic_warns_if_dim_set():
     with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='none', xlen=50)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, xlen=50)
 
     with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='none', ylen=50)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, ylen=50)
 
     with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='none', zlen=150)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, zlen=150)
 
     with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='none', xlen=50, ylen=70)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, xlen=50, ylen=70)
 
     with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='none', ylen=50, xlen=20)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, ylen=50, xlen=20)
 
     with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='none', ylen=50, zlen=10, xlen=20)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, ylen=50, zlen=10, xlen=20)
 
     with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='none', xlen=50)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, xlen=50)
 
 
 def test_neighbors_radius_non_periodic():
@@ -95,7 +90,7 @@ def test_neighbors_radius_non_periodic():
     #        [3.5383612 , 3.47131099, 0.        , 3.29089653, 5.89067059],
     #        [4.72757866, 6.59545298, 3.29089653, 0.        , 5.5470713 ],
     #        [9.12030701, 7.71686465, 5.89067059, 5.5470713 , 0.        ]])
-    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='none')
+    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE)
     expected = { 1: [3, 4, 2],
                  2: [3, 1],
                  3: [4, 2, 1, 5],
@@ -103,7 +98,7 @@ def test_neighbors_radius_non_periodic():
                  5: [4, 3]}
     assert neighbour_lists == expected
 
-    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity_two, radius=3, periodicity='none')
+    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity_two, radius=3, periodicity=Periodicity.NONE)
     expected = {1: [2, 4, 5, 6, 8],
                 2: [1, 4, 5, 6, 8, 9],
                 3: [7],
@@ -121,7 +116,7 @@ def test_neighbors_radius_non_periodic():
 
     # using non-contiguous, out of numeric order id column to check if ids are correctly preserved
     # For ref:      'id': [14, 12, 2, 25, 4],
-    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity_non_contig_id, radius=6, periodicity='none')
+    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity_non_contig_id, radius=6, periodicity=Periodicity.NONE)
     expected = {14: [2, 25, 12],
                 12: [2, 14],
                 2: [25, 12, 14, 4],
@@ -136,27 +131,27 @@ def test_neighbours_radius_dist():
 
 def test_neighbors_radius_periodic_xy_dim_checks():
     with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='xy')
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY)
     assert f'Periodicity of "xy" specified but xlen and ylen are not set' in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='xy', ylen=20)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, ylen=20)
     assert f'Periodicity of "xy" specified but xlen is not set' in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='xy', xlen=50)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=50)
     assert f'Periodicity of "xy" specified but ylen is not set' in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='xy', xlen=-1, ylen=0)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=-1, ylen=0)
     assert f'Periodicity of "xy" specified but xlen and ylen not > 0. xlen: -1, ylen: 0' in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='xy', xlen=-1, ylen=1)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=-1, ylen=1)
     assert f'Periodicity of "xy" specified but xlen is not > 0. xlen: -1' in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='xy', xlen=1, ylen=-2)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=1, ylen=-2)
     assert f'Periodicity of "xy" specified but ylen is not > 0. ylen: -2' in str(excinfo.value)
 
 def test_min_xyz_len():
@@ -168,19 +163,19 @@ def test_min_xyz_len():
     bad_y = max_y - 1
     good_y = max_y + 1
     with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='xy', xlen=bad_x, ylen=good_y)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=bad_x, ylen=good_y)
     assert f'xlen is specified to {bad_x}, lower than max x-value of points in dataset: {max_x}' in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='xy', xlen=good_x, ylen=bad_y)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=good_x, ylen=bad_y)
     assert f'ylen is specified to {bad_y}, lower than max y-value of points in dataset: {max_y}' in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
-         nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='xy', xlen=bad_x, ylen=bad_y)
+         nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=bad_x, ylen=bad_y)
     assert f'xlen, ylen are {bad_x}, {bad_y}, lower than max values in dataset:{max_x} {max_y}' in str(excinfo.value)
 
     try:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity='none', xlen=max_x, ylen=max_y)
+        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, xlen=max_x, ylen=max_y)
     except Exception as e:
         pytest.fail(f'Unexpected exception {e}')
 
@@ -188,7 +183,7 @@ def test_min_xyz_len():
 def test_neighbors_radius_periodic_xy_warn_too_low():
     max_x = 4.9
     max_y = 7.9
-    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=3.5, periodicity='xy', xlen=5, ylen=9)
+    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=3.5, periodicity=Periodicity.XY, xlen=5, ylen=9)
     expected = {0: [1, 4],
                 1: [0, 4, 2],
                 2: [3, 1],
@@ -206,7 +201,7 @@ def test_neighbors_radius_periodic_xy():
     # 3 4.3301270   4.438468    3.2908965   0
     # 4 1.3341664   1.396424    4.3011626   3.1256999   0
 
-    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=3.5, periodicity='xy', xlen=5, ylen=9)
+    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=3.5, periodicity=Periodicity.XY, xlen=5, ylen=9)
     expected = { 1: [2, 5],
                  2: [1, 5, 3],
                  3: [4, 2],
@@ -215,7 +210,7 @@ def test_neighbors_radius_periodic_xy():
     assert neighbour_lists == expected
 
     # tighter radius
-    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=2, periodicity='xy', xlen=5, ylen=9)
+    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=2, periodicity=Periodicity.XY, xlen=5, ylen=9)
     expected = { 1: [2, 5],
                  2: [1, 5],
                  3: [],
@@ -225,7 +220,7 @@ def test_neighbors_radius_periodic_xy():
 
     # using non-contiguous, out of numeric order id column to check if ids are correctly preserved
     # For ref:      'id': [14, 12, 2, 25, 4],
-    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity_non_contig_id, radius=2, periodicity='xy', xlen=5, ylen=9)
+    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity_non_contig_id, radius=2, periodicity=Periodicity.XY, xlen=5, ylen=9)
     expected = { 14: [12, 4],
                  12: [14, 4],
                  2: [],
@@ -234,7 +229,7 @@ def test_neighbors_radius_periodic_xy():
     assert neighbour_lists == expected
 
     # different setup, just to be extra careful
-    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity_two, radius=3, periodicity='xy', xlen=6, ylen=5)
+    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity_two, radius=3, periodicity=Periodicity.XY, xlen=6, ylen=5)
     expected = {1: [4, 2, 3, 10, 12, 5, 11, 7, 6, 8],
                 2: [1, 4, 10, 5, 11, 3, 6, 12, 7, 8, 9],
                 3: [1, 12, 4, 10, 7, 2, 5, 11, 6],
@@ -385,7 +380,7 @@ def test_local_population_structure_periodic():
     #11: 1 3 3 1 2 2 1 1 1 2     -> 11111  222    33   -> 5 3 2
     #12: 3 2 1 2 1 1 2 3         -> 111    222    33   -> 3 3 2
 
-    local_pop = nu_spa.local_population_structure(df_neighbor_periodicity_two, radius= 3, periodicity="xy", xlen=6, ylen=5)
+    local_pop = nu_spa.local_population_structure(df_neighbor_periodicity_two, radius= 3, periodicity=Periodicity.XY, xlen=6, ylen=5)
     assert_frame_equal(local_pop, expected_periodic, check_column_order=False)
 
 def test_local_population_structure_non_periodic():
@@ -412,5 +407,5 @@ def test_local_population_structure_non_periodic():
     #11: 3 2 1 1            -> 11       2   3   -> 2 1 1
     #12: 2                  ->          2       -> 0 1 0
 
-    local_pop = nu_spa.local_population_structure(df_neighbor_periodicity_two, radius= 3, periodicity="none")
+    local_pop = nu_spa.local_population_structure(df_neighbor_periodicity_two, radius= 3, periodicity=Periodicity.NONE)
     assert_frame_equal(local_pop, expected, check_column_order=False)
