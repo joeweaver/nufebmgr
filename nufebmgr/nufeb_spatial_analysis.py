@@ -102,12 +102,15 @@ def local_population_structure(df: pl.DataFrame, radius: float, periodicity: Per
     :param zlen: z-dimension length (not yet required )
     :return: A polars dataframe with n+1 columns. One column lists the ID of a bug. There other n columns are for each
     bug type (group).  The values in each column are the counts of bugs of that type within the radius of bug ID (or 0
-    if none). There is no guarantee of order.
+    if none). There is no guarantee of order. If a bug has no neighbors, it returns 0 for every group
     """
     # TODO update this to use the periodicity enum
     neighbor_ids = neighbors_radius(df, radius, periodicity, xlen, ylen, zlen)
+    all_ids = pl.DataFrame({"id": list(neighbor_ids.keys())})
     rows = [(k, n) for k, vals in neighbor_ids.items() for n in vals]
     neighbor_df = pl.DataFrame(rows, schema=["id", "neighbor_id"])
+    # ensure all ids appear
+    neighbor_df = all_ids.join(neighbor_df, on="id", how="left")
     # TODO join this all up and do a lazy_eval
     neighbor_df = neighbor_df.join(
         df.select(["id", "group"]),
@@ -127,7 +130,7 @@ def local_population_structure(df: pl.DataFrame, radius: float, periodicity: Per
         values="n",
         index="id",
         columns="neighbor_group"
-    ).fill_null(0).sort('id')
+    ).fill_null(0).sort('id').drop('null', strict=False)
     return wide
 
 def _validate_periodicity_lens(df: pl.DataFrame, periodicity: Periodicity, xlen: float=None, ylen:float=None, zlen:float=None) -> None:
@@ -147,6 +150,10 @@ def _validate_periodicity_lens(df: pl.DataFrame, periodicity: Periodicity, xlen:
                     "Either xlen, ylen, or zlen is set but is not needed for no periodicity. Are you sure you're asking for what you're expecting?",
                     UserWarning)
         case Periodicity.XY:
+            if zlen is not None:
+                warnings.warn(
+                    "zlen is set but is not needed for XY periodicity. Are you sure you're asking for what you're expecting?",
+                    UserWarning)
             if xlen is None and ylen is None:
                 raise ValueError('Periodicity of "xy" specified but xlen and ylen are not set')
             if xlen is None:

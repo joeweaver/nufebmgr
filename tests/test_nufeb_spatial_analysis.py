@@ -1,8 +1,6 @@
 import pytest
 import polars as pl
 from polars.testing import assert_frame_equal
-import numpy as np
-from sklearn.neighbors import KDTree
 from nufebmgr import nufeb_spatial_analysis as nu_spa
 from nufebmgr.nufeb_spatial_analysis import Periodicity
 
@@ -54,12 +52,6 @@ df_neighbor_periodicity_two = pl.DataFrame({
     'x': [0.5, 1.0, 5.5, 0.5, 2.0, 2.0, 5.5, 2.0, 3.0, 0.5, 2.0, 5.5],
     'y': [0.5, 0.5, 0.5, 1.0, 1.0, 2.0, 2.0, 2.5, 2.5, 4.5, 4.5, 4.5],
     'z': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]})
-
-def test_smoke():
-    coords = df_simple.select(["x", "y", "z"])
-    assert coords['x'][1] == 1.0
-    assert coords['y'][2] == 2.0
-    assert coords['z'][3] == 5.0
 
 def test_neighbors_radius_non_periodic_warns_if_dim_set():
     with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
@@ -123,11 +115,6 @@ def test_neighbors_radius_non_periodic():
                 25: [2, 14, 4],
                 4: [25, 2]}
     assert neighbour_lists == expected
-    ## different setup, just to be careful
-
-@pytest.mark.skip(reason="check dists internally for certainty")
-def test_neighbours_radius_dist():
-    pass
 
 def test_neighbors_radius_periodic_xy_dim_checks():
     with pytest.raises(ValueError) as excinfo:
@@ -179,18 +166,10 @@ def test_min_xyz_len():
     except Exception as e:
         pytest.fail(f'Unexpected exception {e}')
 
-@pytest.mark.skip(reason="periodic_xy should warn if zlen is set")
-def test_neighbors_radius_periodic_xy_warn_too_low():
-    max_x = 4.9
-    max_y = 7.9
-    neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=3.5, periodicity=Periodicity.XY, xlen=5, ylen=9)
-    expected = {0: [1, 4],
-                1: [0, 4, 2],
-                2: [3, 1],
-                3: [4, 2],
-                4: [0, 1, 3]}
-    assert neighbour_lists == expected
-    pass
+def test_neighbors_radius_periodic_xy_warn_zlen_set():
+    with pytest.warns(UserWarning, match="is set but is not needed for XY periodicity"):
+        neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=3.5, periodicity=Periodicity.XY,
+                                              xlen=5, ylen=9, zlen=10)
 
 def test_neighbors_radius_periodic_xy():
     # distance matrix for x=5, y=9. Lower triangle. truncated without rounding
@@ -245,27 +224,89 @@ def test_neighbors_radius_periodic_xy():
 
     assert neighbour_lists == expected
 
-@pytest.mark.skip(reason="extensive varied periodic bc checks to be sure")
-def test_varied_periodic_check():
+#radius neighbours, population structure, nearest to group
+# periodic.XY and periodic.NONE
+def test_neighbors_and_pop_struct_radius_edge():
+    df = pl.DataFrame({
+        "id": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        "group": [2, 2, 1, 3, 1, 3, 2, 2, 1, 3],
+        "x": [0.0, 0.5, 0.2, 0.8, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "y": [0.0, 0.0, 0.0, 0.0, 0.2, 0.8, 0.0, 0.0, 0.5, 0.0],
+        "z": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2, 0.8, 0.0, 0.5],
+    })
+    radius = 0.2
+    ## XY periodicity neighbours
+    expected_periodic_xy_neighbors = {1: [4, 6, 5, 7, 3],
+                2: [],
+                3: [1],
+                4: [1],
+                5: [1],
+                6: [1],
+                7: [1],
+                8: [],
+                9: [],
+                10: []}
+    results_periodic_xy_neighbors = nu_spa.neighbors_radius(df, radius, Periodicity.XY, xlen=1.0, ylen=1.0)
+    assert results_periodic_xy_neighbors == expected_periodic_xy_neighbors
+
+    ## NONE periodicity neighbors
+    expected_periodic_none_neighbors = {1: [7, 5, 3],
+                                        2: [],
+                                        3: [1],
+                                        4: [],
+                                        5: [1],
+                                        6: [],
+                                        7: [1],
+                                        8: [],
+                                        9: [],
+                                        10: []}
+    results_periodic_none_neighbors = nu_spa.neighbors_radius(df, radius, Periodicity.NONE, xlen=1.0, ylen=1.0)
+    assert results_periodic_none_neighbors == expected_periodic_none_neighbors
+
+    # XY periodicity local pop struct
+    expected_XY_groups = pl.DataFrame({
+               'id': pl.Series([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=pl.Int64),
+               '1': pl.Series([2, 0, 0, 0, 0, 0, 0, 0, 0, 0 ], dtype=pl.UInt32),
+               '2': pl.Series([1, 0, 1, 1, 1, 1, 1, 0, 0, 0], dtype=pl.UInt32),
+               '3': pl.Series([2, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=pl.UInt32)})
+
+    results_XY_groups = nu_spa.local_population_structure(df, radius, Periodicity.XY, xlen=1.0, ylen=1.0)
+    assert_frame_equal(results_XY_groups, expected_XY_groups, check_column_order=False)
+
+    # NONE periodicity local pop struct
+    expected_none_groups = pl.DataFrame({
+               'id': pl.Series([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=pl.Int64),
+               '1': pl.Series([0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ], dtype=pl.UInt32),
+               '2': pl.Series([1, 0, 1, 0, 1, 0, 1, 0, 0, 0], dtype=pl.UInt32),
+               '3': pl.Series([2, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=pl.UInt32)})
+
+    results_none_groups = nu_spa.local_population_structure(df, radius, Periodicity.NONE, xlen=1.0, ylen=1.0)
+
+@pytest.mark.skip(reason="point on boundary")
+def test_point_on_boundary():
     pass
 
-@pytest.mark.skip(reason="case where it's within radius for both periodic and non and it's closer when periodic/when not periodic")
-def test_more_periodic_dumbness():
-    pass
-@pytest.mark.skip(reason="what about exactly on 0 or boundary or right at radius")
-def test_neighbors_radius_edge():
+@pytest.mark.skip(reason="point_on_corner")
+def test_point_on_corner():
     pass
 
-@pytest.mark.skip(reason="n neighbors")
-def test_n_neighbors():
+@pytest.mark.skip(reason="Overlapping points")
+def test_overlapping_points():
     pass
 
-@pytest.mark.skip(reason="bad periodicity error in nearest_of_each_group")
-def test_distance_to_nearest_of_each_group_bad_periodicity():
+@pytest.mark.skip(reason="one point only")
+def test_one_point_only():
     pass
 
-@pytest.mark.skip(reason="bad periodicity lens in nearest_of_each_group")
-def test_distance_to_nearest_of_each_group_bad_periodicity_lens():
+@pytest.mark.skip(reason="z-coordinate")
+def test_z_coordinate():
+    pass
+
+@pytest.mark.skip(reason="no neighbors in radius")
+def test_no_neighbours_in_radius():
+    pass
+@pytest.mark.skip(reason="radius lte 0")
+def test_radius_lte_zero():
     pass
 
 # TODO wrap all such of these into a pytest.mark.paramterize
@@ -352,18 +393,12 @@ def test_distance_to_nearest_of_each_group_non_periodic():
     result = nu_spa.distance_to_each_group(df_neighbor_periodicity_two,periodicity=nu_spa.Periodicity.NONE)
     assert_frame_equal(result, expected, check_column_order=False, check_exact=False)
 
-@pytest.mark.skip(reason="xlen, ylen, raises, etc for population structure")
-def test_local_population_structure_raises():
-    pass
-
 def test_local_population_structure_periodic():
-    # nb got the column ids screwed up when reading autogenerated
     expected_periodic = pl.DataFrame({
         'id': pl.Series([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], dtype=pl.Int64),
         '1': pl.Series([4, 5, 5, 6, 6, 4, 5, 5, 3, 5, 5, 3], dtype=pl.UInt32),
         '2': pl.Series([4, 4, 2, 3, 4, 4, 3, 2, 3, 4, 3, 3], dtype=pl.UInt32),
         '3': pl.Series([2, 2, 2, 2, 1, 2, 2, 2, 1, 1, 2, 2], dtype=pl.UInt32)})
-
 
     # For df_neighbor_periodicity_two, xlen=5, ylen=6, radius=3
     # Tallied by hand. ID, group type of neighbors, sorted, counts
