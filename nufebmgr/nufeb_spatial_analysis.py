@@ -94,7 +94,7 @@ def local_population_structure(df: pl.DataFrame, radius: float, periodicity: Per
                      xlen: float=None, ylen:float=None, zlen:float=None) -> pl.DataFrame:
     """
     Determine the population structure around a bug.
-    :param df: a polars dataframe with columns x, y, and z f
+    :param df: a polars dataframe with columns x, y, and z
     :param radius: Radius within which to search
     :param periodicity: is the simulation non-periodic or does it wrap around in xy plane
     :param xlen: x-dimension length (required for 'xy' periodicity)
@@ -131,6 +131,11 @@ def local_population_structure(df: pl.DataFrame, radius: float, periodicity: Per
         index="id",
         columns="neighbor_group"
     ).fill_null(0).sort('id').drop('null', strict=False)
+    # append any groups which exist but which were not in any neighbor list as all 0's
+    all_groups=df["group"].unique().cast(pl.Utf8).to_list()
+    for g in all_groups:
+        if g not in wide.columns:
+            wide = wide.with_columns(pl.lit(0, dtype=pl.UInt32).alias(g))
     return wide
 
 def _validate_periodicity_lens(df: pl.DataFrame, periodicity: Periodicity, xlen: float=None, ylen:float=None, zlen:float=None) -> None:
