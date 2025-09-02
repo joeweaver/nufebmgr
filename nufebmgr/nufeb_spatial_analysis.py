@@ -106,11 +106,15 @@ def local_population_structure(df: pl.DataFrame, radius: float, periodicity: Per
     """
     # TODO update this to use the periodicity enum
     neighbor_ids = neighbors_radius(df, radius, periodicity, xlen, ylen, zlen)
-    all_ids = pl.DataFrame({"id": list(neighbor_ids.keys())})
     rows = [(k, n) for k, vals in neighbor_ids.items() for n in vals]
-    neighbor_df = pl.DataFrame(rows, schema=["id", "neighbor_id"])
-    # ensure all ids appear
-    neighbor_df = all_ids.join(neighbor_df, on="id", how="left")
+    if rows != []:
+        neighbor_df = pl.DataFrame(rows, schema=["id", "neighbor_id"])
+        # ensure all ids appear
+        all_ids = pl.DataFrame({"id": list(neighbor_ids.keys())})
+        neighbor_df = all_ids.join(neighbor_df, on="id", how="left")
+    else:
+        # deal with the case where nobody has neighbors
+        neighbor_df = pl.DataFrame({"id": list(neighbor_ids.keys())}).with_columns(pl.lit(None, pl.UInt32).alias("neighbor_id"))
     # TODO join this all up and do a lazy_eval
     neighbor_df = neighbor_df.join(
         df.select(["id", "group"]),
