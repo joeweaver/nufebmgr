@@ -306,9 +306,49 @@ def test_local_pop_structure_one_group_never_in():
     assert_frame_equal(results, expected, check_column_order=False)
 
 
-@pytest.mark.skip(reason="none-periodic with points on boundary")
 def test_point_on_boundary_periodic_none():
-    pass
+    df = pl.DataFrame({
+        "id": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "group": [2, 2, 1, 3, 1, 2, 2, 3, 1],
+        "x": [0.0, 1.0, 0.0, 1.0, 0.5, 0.2, 0.2, 0.8, 0.8],
+        "y": [0.0, 0.0, 0.5, 0.5, 0.25, 0.0, 0.5, 0.0, 0.5],
+        "z": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    })
+    radius = 0.2
+
+    ### Neighbors
+    expected_neighbors_none = {1: [6],
+                             2: [8],
+                             3: [7],
+                             4: [9],
+                             5: [],
+                             6: [1],
+                             7: [3],
+                             8: [2],
+                             9: [4]}
+    neighbors_none = nu_spa.neighbors_radius(df, radius, periodicity=Periodicity.NONE, xlen=1.0, ylen=0.5)
+    assert neighbors_none == expected_neighbors_none
+
+    ### Groups
+    expected_none_groups = pl.DataFrame({
+        'id': pl.Series([1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=pl.Int64),
+        '1': pl.Series([0, 0, 0, 1, 0, 0, 1, 0, 0], dtype=pl.UInt32),
+        '2': pl.Series([1, 0, 1, 0, 0, 1, 0, 1, 0], dtype=pl.UInt32),
+        '3': pl.Series([0, 1, 0, 0, 0, 0, 0, 0, 1], dtype=pl.UInt32)})
+    results_none_groups = nu_spa.local_population_structure(df, radius, periodicity=Periodicity.NONE, xlen=1.0, ylen=0.5)
+    assert_frame_equal(results_none_groups, expected_none_groups, check_column_order=False)
+
+    ## nearest in each group
+    expected_nearest_none = pl.DataFrame({
+        'id': pl.Series([1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=pl.Int64),
+        'type-1-dist': pl.Series([.5, .538516, .5590169, .2, .390512, .390512, .2, .390512, .390512], dtype=pl.Float64),
+        'type-1-id': pl.Series([3, 9, 5, 9, 9, 5, 3, 5, 5], dtype=pl.Int64),
+        'type-2-dist': pl.Series([.2, .8, .2, .5, .390512, .2,.5, .2, .538516], dtype=pl.Float64),
+        'type-2-id': pl.Series([6, 6, 7, 2, 6, 1, 6, 2, 2], dtype=pl.Int64),
+        'type-3-dist': pl.Series([.8, .2, .943398, .538516, .390512, .6, .781025, .538516, .2], dtype=pl.Float64),
+        'type-3-id': pl.Series([8, 8, 8, 8, 8, 8, 8, 4, 4], dtype=pl.Int64),})
+    result_nearest_none = nu_spa.distance_to_each_group(df,periodicity=nu_spa.Periodicity.NONE, xlen=1.0, ylen=0.5)
+    assert_frame_equal(result_nearest_none, expected_nearest_none, check_column_order=False, check_exact=False)
 
 def test_point_on_boundary_periodic_xy():
     df = pl.DataFrame({
@@ -319,7 +359,6 @@ def test_point_on_boundary_periodic_xy():
         "z": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
     })
     radius = 0.2
-    ## XY
     ### Neighbors
     expected_neighbors_xy = {1: [3, 2, 4, 9, 8, 6, 7],
                              2: [4, 3, 1, 9, 7, 8, 6],
@@ -342,17 +381,17 @@ def test_point_on_boundary_periodic_xy():
     results_xy_groups = nu_spa.local_population_structure(df, radius, periodicity=Periodicity.XY, xlen=1.0, ylen=0.5)
     assert_frame_equal(results_xy_groups, expected_xy_groups, check_column_order=False)
 
-    # ## nearest in each group
-    # expected_nearest_xy = pl.DataFrame({
-    #     'id': pl.Series([1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=pl.Int64),
-    #     'type-1-dist': pl.Series([0.0, 0.0, 0.2, 0.0, 0.3], dtype=pl.Float64),
-    #     'type-1-id': pl.Series([3, 3, 9, 3], dtype=pl.Int64),
-    #     'type-2-dist': pl.Series([0.2], dtype=pl.Float64),
-    #     'type-2-id': pl.Series([6], dtype=pl.Int64),
-    #     'type-3-dist': pl.Series([0.0], dtype=pl.Float64),
-    #     'type-3-id': pl.Series([4], dtype=pl.Int64),})
-    # result_nearest_xy = nu_spa.distance_to_each_group(df,periodicity=nu_spa.Periodicity.XY, xlen=1.0, ylen=0.5)
-    # assert_frame_equal(result_nearest_xy, expected_nearest_xy, check_column_order=False, check_exact=False)
+    ## nearest in each group
+    expected_nearest_xy = pl.DataFrame({
+        'id': pl.Series([1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=pl.Int64),
+        'type-1-dist': pl.Series([0, 0, .2, 0, .390512, .2, .2, 0, 0.2], dtype=pl.Float64),
+        'type-1-id': pl.Series([3, 3, 9, 3, 9, 3, 3, 9, 3], dtype=pl.Int64),
+        'type-2-dist': pl.Series([0, 0, 0, 0, .390512, 0, 0, .2, .2], dtype=pl.Float64),
+        'type-2-id': pl.Series([2, 1, 1, 1, 6, 7, 6, 1, 1], dtype=pl.Int64),
+        'type-3-dist': pl.Series([0, 0, 0, .2, .390512, .2, .2, .2, 0], dtype=pl.Float64),
+        'type-3-id': pl.Series([4, 4, 4,8, 8, 4, 4, 4, 8], dtype=pl.Int64), })
+    result_nearest_xy = nu_spa.distance_to_each_group(df,periodicity=nu_spa.Periodicity.XY, xlen=1.0, ylen=0.5)
+    assert_frame_equal(result_nearest_xy, expected_nearest_xy, check_column_order=False, check_exact=False)
 
 @pytest.mark.skip(reason="point_on_corner")
 def test_point_on_corner():
