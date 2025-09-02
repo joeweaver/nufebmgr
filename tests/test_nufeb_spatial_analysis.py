@@ -467,11 +467,45 @@ def test_one_point_only():
         'type-2-id': pl.Series([3], dtype=pl.Int64), })
     result_nearest = nu_spa.distance_to_each_group(df, periodicity=nu_spa.Periodicity.XY, xlen=xlen, ylen=ylen)
     assert_frame_equal(result_nearest, expected, check_column_order=False, check_exact=False)
-    pass
 
-@pytest.mark.skip(reason="z-coordinate")
 def test_z_coordinate():
-    pass
+    df = pl.DataFrame({
+        "id": [1,2,3],
+        "group": [3,1,2],
+        "x": [0.5,0.5,0.5],
+        "y": [0.5,0.5,0.5],
+        "z": [0.0,0.5,0.6],
+    })
+    radius = 0.2
+    xlen = 1.0
+    ylen = 1.0
+    ### Neighbors
+    expected = {1: [],
+                2: [3],
+                3: [2]}
+    neighbors = nu_spa.neighbors_radius(df, radius, periodicity=Periodicity.XY, xlen=xlen, ylen=ylen)
+    assert neighbors == expected
+
+    ### Groups
+    expected = pl.DataFrame({
+        'id': pl.Series([1,2,3], dtype=pl.Int64),
+        '1': pl.Series([0, 0, 1], dtype=pl.UInt32),
+        '2': pl.Series([0, 1, 0], dtype=pl.UInt32),
+        '3': pl.Series([0, 0, 0], dtype=pl.UInt32)})
+    groups = nu_spa.local_population_structure(df, radius, periodicity=Periodicity.XY, xlen=xlen, ylen=ylen)
+    assert_frame_equal(groups, expected, check_column_order=False)
+
+    ## nearest in each group
+    expected = pl.DataFrame({
+        'id': pl.Series([1,2,3], dtype=pl.Int64),
+        'type-1-dist': pl.Series([0.5, 0, 0.1], dtype=pl.Float64),
+        'type-1-id': pl.Series([2, 2, 2], dtype=pl.Int64),
+        'type-2-dist': pl.Series([0.6, 0.1, 0], dtype=pl.Float64),
+        'type-2-id': pl.Series([3, 3, 3], dtype=pl.Int64),
+        'type-3-dist': pl.Series([0, 0.5, 0.6], dtype=pl.Float64),
+        'type-3-id': pl.Series([1, 1, 1], dtype=pl.Int64), })
+    result_nearest = nu_spa.distance_to_each_group(df, periodicity=nu_spa.Periodicity.XY, xlen=xlen, ylen=ylen)
+    assert_frame_equal(result_nearest, expected, check_column_order=False, check_exact=False)
 
 @pytest.mark.skip(reason="no neighbors in radius")
 def test_no_neighbours_in_radius():
