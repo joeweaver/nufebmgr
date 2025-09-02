@@ -393,13 +393,56 @@ def test_point_on_boundary_periodic_xy():
     result_nearest_xy = nu_spa.distance_to_each_group(df,periodicity=nu_spa.Periodicity.XY, xlen=1.0, ylen=0.5)
     assert_frame_equal(result_nearest_xy, expected_nearest_xy, check_column_order=False, check_exact=False)
 
-@pytest.mark.skip(reason="point_on_corner")
-def test_point_on_corner():
-    pass
-
-@pytest.mark.skip(reason="Overlapping points")
 def test_overlapping_points():
-    pass
+    df = pl.DataFrame({
+        "id": [1, 2, 3, 4, 5],
+        "group": [1, 2, 2, 3, 4],
+        "x": [0.1, 0.5, 0.5, 0.5, 0.6],
+        "y": [0.1, 0.5, 0.5, 0.5, 0.6],
+        "z": [0.0, 0.0, 0.0, 0.0, 0.0],
+    })
+    radius = 0.2
+    xlen = 1.0
+    ylen = 1.0
+    ### Neighbors
+    expected = {1: [],
+                2: [4, 3, 5],
+                3: [4, 2, 5],
+                4: [3, 2, 5],
+                5: [2, 4, 3]}
+    neighbors = nu_spa.neighbors_radius(df, radius, periodicity=Periodicity.XY, xlen=xlen, ylen=ylen)
+    assert neighbors == expected
+
+    ### Groups
+    expected = pl.DataFrame({
+        'id': pl.Series([1, 2, 3, 4, 5], dtype=pl.Int64),
+        '1': pl.Series([0, 0, 0, 0, 0], dtype=pl.UInt32),
+        '2': pl.Series([0, 1, 1, 2, 2], dtype=pl.UInt32),
+        '3': pl.Series([0, 1, 1, 0, 1], dtype=pl.UInt32),
+        '4': pl.Series([0, 1, 1, 1, 0], dtype=pl.UInt32)})
+    groups = nu_spa.local_population_structure(df, radius, periodicity=Periodicity.XY, xlen=xlen, ylen=ylen)
+    assert_frame_equal(groups, expected, check_column_order=False)
+    df = pl.DataFrame({
+        "id": [1, 2, 3, 4, 5],
+        "group": [1, 2, 2, 3, 4],
+        "x": [0.1, 0.5, 0.5, 0.5, 0.6],
+        "y": [0.5, 0.5, 0.5, 0.5, 0.5],
+        "z": [0.0, 0.0, 0.0, 0.0, 0.0],
+    })
+
+    ## nearest in each group
+    expected = pl.DataFrame({
+        'id': pl.Series([1, 2, 3, 4, 5], dtype=pl.Int64),
+        'type-1-dist': pl.Series([0, 0.4, 0.4, 0.4, 0.5], dtype=pl.Float64),
+        'type-1-id': pl.Series([1, 1, 1, 1, 1], dtype=pl.Int64),
+        'type-2-dist': pl.Series([0.4, 0, 0, 0, 0.1], dtype=pl.Float64),
+        'type-2-id': pl.Series([2, 3, 2, 2, 2], dtype=pl.Int64),
+        'type-3-dist': pl.Series([0.4, 0, 0, 0, 0.1], dtype=pl.Float64),
+        'type-3-id': pl.Series([4, 4, 4, 4, 4], dtype=pl.Int64),
+        'type-4-dist': pl.Series([0.5, 0.1, 0.1, 0.1, 0], dtype=pl.Float64),
+        'type-4-id': pl.Series([5, 5, 5, 5, 5], dtype=pl.Int64), })
+    result_nearest = nu_spa.distance_to_each_group(df, periodicity=nu_spa.Periodicity.XY, xlen=xlen, ylen=ylen)
+    assert_frame_equal(result_nearest, expected, check_column_order=False, check_exact=False)
 
 @pytest.mark.skip(reason="one point only")
 def test_one_point_only():
