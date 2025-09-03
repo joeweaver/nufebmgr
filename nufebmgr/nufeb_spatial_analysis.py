@@ -2,7 +2,6 @@ import warnings
 import polars as pl
 import numpy as np
 from sklearn.neighbors import KDTree
-from scipy.spatial import distance_matrix
 from enum import Enum
 
 class Periodicity(Enum):
@@ -222,8 +221,7 @@ def distance_to_each_group(df: pl.DataFrame, periodicity: Periodicity, xlen: flo
 
             # Filter based on group and min squared distance
             unique_types = np.unique(groups)
-            N = len(ids)
-            num_types = len(unique_types)
+            n_ids = len(ids)
             columns = {"id": ids}
             for t in unique_types:
                 mask = np.array(groups).flatten() == t
@@ -232,7 +230,7 @@ def distance_to_each_group(df: pl.DataFrame, periodicity: Periodicity, xlen: flo
                 if mask.sum() == 1:
                     # handle the case where a bug is the only one of its type
                     only_idx = np.where(mask)[0][0]
-                    closest_idx = np.full(N, only_idx)
+                    closest_idx = np.full(n_ids, only_idx)
                     closest_sq = sq_dist_masked[:, only_idx]
                     closest_sq[only_idx] = 0.0
                 else:
@@ -240,7 +238,7 @@ def distance_to_each_group(df: pl.DataFrame, periodicity: Periodicity, xlen: flo
                     np.fill_diagonal(sq_dist_masked, np.inf)
                     # get index and calc sqrt for only nearest
                     closest_idx = sq_dist_masked.argmin(axis=1)
-                    closest_sq = sq_dist_masked[np.arange(N), closest_idx]
+                    closest_sq = sq_dist_masked[np.arange(n_ids), closest_idx]
 
                 # update dict used to create dataframe
                 columns[f"type-{t}-dist"] = np.sqrt(closest_sq)
@@ -265,8 +263,7 @@ def distance_to_each_group(df: pl.DataFrame, periodicity: Periodicity, xlen: flo
 
             # Filter based on group and min squared distance
             unique_types = np.unique(groups)
-            N = len(ids)
-            num_types = len(unique_types)
+            n_ids = len(ids)
             columns = {"id": ids}
             for t in unique_types:
                 mask = np.array(groups).flatten() == t
@@ -275,7 +272,7 @@ def distance_to_each_group(df: pl.DataFrame, periodicity: Periodicity, xlen: flo
                 if mask.sum() == 1:
                     # handle the case where a bug is the only one of its type
                     only_idx = np.where(mask)[0][0]
-                    closest_idx = np.full(N, only_idx)
+                    closest_idx = np.full(n_ids, only_idx)
                     closest_sq = sq_dist_masked[:, only_idx]
                     closest_sq[only_idx] = 0.0
                 else:
@@ -283,7 +280,7 @@ def distance_to_each_group(df: pl.DataFrame, periodicity: Periodicity, xlen: flo
                     np.fill_diagonal(sq_dist_masked, np.inf)
                     # get index and calc sqrt for only nearest
                     closest_idx = sq_dist_masked.argmin(axis=1)
-                    closest_sq = sq_dist_masked[np.arange(N), closest_idx]
+                    closest_sq = sq_dist_masked[np.arange(n_ids), closest_idx]
 
                 # update dict used to create dataframe
                 columns[f"type-{t}-dist"] = np.sqrt(closest_sq)
