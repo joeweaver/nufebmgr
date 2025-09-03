@@ -1,4 +1,5 @@
 import pytest
+import inspect
 import polars as pl
 from polars.testing import assert_frame_equal
 from nufebmgr import nufeb_spatial_analysis as nu_spa
@@ -486,23 +487,11 @@ def test_no_neighbours_in_radius():
 def test_radius_lte_zero(func, radius, expect_error):
     if expect_error:
         with pytest.raises(ValueError) as excinfo:
-            func(
-                df_neighbor_periodicity,
-                radius=radius,
-                periodicity=Periodicity.NONE,
-                xlen=6,
-                ylen=5,
-            )
+            func(df_neighbor_periodicity, radius=radius, periodicity=Periodicity.NONE, xlen=6, ylen=5)
         expected_msg = f"Radius is {radius}, but must be greater than 0"
         assert expected_msg in str(excinfo.value)
     else:
-        result = func(
-            df_neighbor_periodicity,
-            radius=radius,
-            periodicity=Periodicity.NONE,
-            xlen=6,
-            ylen=5,
-        )
+        result = func(df_neighbor_periodicity, radius=radius, periodicity=Periodicity.NONE, xlen=6, ylen=5)
         assert result is not None
 
 
@@ -647,14 +636,29 @@ def test_local_population_structure_non_periodic():
 # Input validation checks #
 ###########################
 
-# TODO wrap all such of these into a pytest.mark.paramterize
-@pytest.mark.skip(reason="periodicity validation")
-def test_periodicity_validation():
-    pass
+def _build_call_kwargs(func, radius:float, periodicity: Periodicity, kwargs):
+    """
+    Helps deal with the fact that distance_to_each_group doesn't have a radius parameter.
+    Using this, we can continue to use parametrize
+    :param periodicity: passed in from test
+    :param radius: passed in from test
+    :param kwargs: passed in from parametrize, ultimately
+    :return: essentially a new kwargs 
+    """
+    # dealing with nu_spa.distance_to_each_group not needing radius
+    call_kwargs = dict(periodicity=periodicity, **kwargs)
 
+    # inspect the function to see if it accepts 'radius'
+    sig = inspect.signature(func)
+    if "radius" in sig.parameters:
+        call_kwargs["radius"] = radius
+    return call_kwargs
 
 @pytest.mark.parametrize(
-    "kwargs",[
+    "func", [nu_spa.neighbors_radius, nu_spa.local_population_structure, nu_spa.distance_to_each_group]
+)
+@pytest.mark.parametrize(
+    "kwargs", [
         {"xlen": 50},
         {"ylen": 50},
         {"zlen": 150},
@@ -662,69 +666,65 @@ def test_periodicity_validation():
         {"ylen": 50, "xlen": 20},
         {"ylen": 50, "zlen": 10, "xlen": 20}],
 )
-def test_neighbors_radius_non_periodic_warns_if_dim_set(kwargs):
-    with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(
-            df_neighbor_periodicity,
-            radius=6,
-            periodicity=Periodicity.NONE,
-            **kwargs
-        )
+def test_non_periodic_warns_if_dim_set(func, kwargs):
+    call_kwargs = _build_call_kwargs(func, 6, Periodicity.NONE, kwargs)
+
+    with pytest.warns(UserWarning, match="is set but is not needed for Periodicity"):
+        func(df_neighbor_periodicity, **call_kwargs)
 
 
-def test_neighbors_radius_periodic_xy_dim_checks():
+@pytest.mark.parametrize(
+    "func", [nu_spa.neighbors_radius, nu_spa.local_population_structure, nu_spa.distance_to_each_group]
+)
+@pytest.mark.parametrize(
+    ("kwargs", "message"),[
+        ({}, 'Periodicity of "xy" specified but xlen and ylen are not set'),
+        ({'ylen': 20}, 'Periodicity of "xy" specified but xlen is not set'),
+        ({'xlen': 50}, 'Periodicity of "xy" specified but ylen is not set'),
+        ({'xlen': -1, 'ylen': 0}, 'Periodicity of "xy" specified but xlen and ylen not > 0. xlen: -1, ylen: 0'),
+        ({'xlen': -1, 'ylen': 1}, f'Periodicity of "xy" specified but xlen is not > 0. xlen: -1'),
+        ({'xlen': 1, 'ylen': -2}, 'Periodicity of "xy" specified but ylen is not > 0. ylen: -2'),
+    ]
+)
+def test_radius_periodic_xy_dim_checks(func,kwargs, message):
+    call_kwargs = _build_call_kwargs(func, 6, Periodicity.XY, kwargs)
     with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY)
-    assert f'Periodicity of "xy" specified but xlen and ylen are not set' in str(excinfo.value)
+        func(df_neighbor_periodicity, **call_kwargs)
+    assert message == str(excinfo.value)
 
-    with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, ylen=20)
-    assert f'Periodicity of "xy" specified but xlen is not set' in str(excinfo.value)
-
-    with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=50)
-    assert f'Periodicity of "xy" specified but ylen is not set' in str(excinfo.value)
-
-    with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=-1, ylen=0)
-    assert f'Periodicity of "xy" specified but xlen and ylen not > 0. xlen: -1, ylen: 0' in str(excinfo.value)
-
-    with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=-1, ylen=1)
-    assert f'Periodicity of "xy" specified but xlen is not > 0. xlen: -1' in str(excinfo.value)
-
-    with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=1, ylen=-2)
-    assert f'Periodicity of "xy" specified but ylen is not > 0. ylen: -2' in str(excinfo.value)
-
-
-def test_min_xyz_len():
-    #xlen or ylen not greater than max"
-    max_x = 4.9
-    bad_x = max_x-1
-    good_x = max_x+1
-    max_y = 7.9
-    bad_y = max_y - 1
-    good_y = max_y + 1
-    with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=bad_x, ylen=good_y)
-    assert f'xlen is specified to {bad_x}, lower than max x-value of points in dataset: {max_x}' in str(excinfo.value)
-
-    with pytest.raises(ValueError) as excinfo:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=good_x, ylen=bad_y)
-    assert f'ylen is specified to {bad_y}, lower than max y-value of points in dataset: {max_y}' in str(excinfo.value)
-
-    with pytest.raises(ValueError) as excinfo:
-         nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.XY, xlen=bad_x, ylen=bad_y)
-    assert f'xlen, ylen are {bad_x}, {bad_y}, lower than max values in dataset:{max_x} {max_y}' in str(excinfo.value)
-
-    try:
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, xlen=max_x, ylen=max_y)
-    except Exception as e:
-        pytest.fail(f'Unexpected exception {e}')
+@pytest.mark.parametrize(
+    "func", [nu_spa.neighbors_radius, nu_spa.local_population_structure, nu_spa.distance_to_each_group]
+)
+@pytest.mark.parametrize(
+    ("should_raise", "kwargs", "message"), [
+        (True, {'xlen': 3.9, 'ylen': 8.9}, 'xlen is specified to 3.9, lower than max x-value of points in dataset: 4.9'),
+        (True, {'xlen': 5.9, 'ylen': 6.9}, 'ylen is specified to 6.9, lower than max y-value of points in dataset: 7.9'),
+        (True, {'xlen': 3.9, 'ylen': 6.9}, 'xlen, ylen are 3.9, 6.9, lower than max values in dataset:4.9 7.9'),
+        (False, {'xlen': 5.9, 'ylen': 8.9}, 'xlen, ylen are 3.9, 6.9, lower than max values in dataset:4.9 7.9'),
+    ]
+)
+def test_min_xy_len(func, should_raise, kwargs, message):
+    call_kwargs = _build_call_kwargs(func, 6, Periodicity.XY, kwargs)
+    if should_raise:
+        with pytest.raises(ValueError) as excinfo:
+            func(df_neighbor_periodicity, **call_kwargs)
+        assert message == str(excinfo.value)
+    else:
+        try:
+            func(df_neighbor_periodicity, **call_kwargs)
+        except Exception as e:
+            pytest.fail(f'Unexpected exception {e}')
 
 
-def test_neighbors_radius_periodic_xy_warn_zlen_set():
-    with pytest.warns(UserWarning, match="is set but is not needed for XY periodicity"):
-        neighbour_lists = nu_spa.neighbors_radius(df_neighbor_periodicity, radius=3.5, periodicity=Periodicity.XY,
-                                              xlen=5, ylen=9, zlen=10)
+@pytest.mark.parametrize(
+    "func", [nu_spa.neighbors_radius, nu_spa.local_population_structure, nu_spa.distance_to_each_group]
+)
+@pytest.mark.parametrize(
+    ("kwargs", "periodicity"), [
+        ({"ylen": 50, "zlen": 10, "xlen": 20}, Periodicity.NONE),
+        ({"ylen": 50, "zlen": 10, "xlen": 20}, Periodicity.XY)],
+)
+def test_neighbors_radius_periodic_xy_warn_zlen_set(func, kwargs, periodicity):
+    call_kwargs = _build_call_kwargs(func, 3.5, periodicity, kwargs)
+    with pytest.warns(UserWarning, match=f"zlen is set but is not needed for Periodicity:{periodicity.value}"):
+        neighbour_lists = func(df_neighbor_periodicity, **call_kwargs)

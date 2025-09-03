@@ -154,14 +154,18 @@ def _validate_periodicity_lens(df: pl.DataFrame, periodicity: Periodicity, xlen:
     """
     match periodicity:
         case Periodicity.NONE:
-            if xlen is not None or ylen is not None or zlen is not None:
+            if zlen is not None:
                 warnings.warn(
-                    "Either xlen, ylen, or zlen is set but is not needed for no periodicity. Are you sure you're asking for what you're expecting?",
+                    f"zlen is set but is not needed for Periodicity:{periodicity.value}. Are you sure you're asking for what you're expecting?",
+                    UserWarning)
+            if xlen is not None or ylen is not None:
+                warnings.warn(
+                    f"Either xlen or ylen is set but is not needed for Periodicity:{periodicity.value}. Are you sure you're asking for what you're expecting?",
                     UserWarning)
         case Periodicity.XY:
             if zlen is not None:
                 warnings.warn(
-                    "zlen is set but is not needed for XY periodicity. Are you sure you're asking for what you're expecting?",
+                    f"zlen is set but is not needed for Periodicity:{periodicity.value}. Are you sure you're asking for what you're expecting?",
                     UserWarning)
             if xlen is None and ylen is None:
                 raise ValueError('Periodicity of "xy" specified but xlen and ylen are not set')
