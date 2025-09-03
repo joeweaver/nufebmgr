@@ -652,27 +652,24 @@ def test_local_population_structure_non_periodic():
 def test_periodicity_validation():
     pass
 
-def test_neighbors_radius_non_periodic_warns_if_dim_set():
-    with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, xlen=50)
 
+@pytest.mark.parametrize(
+    "kwargs",[
+        {"xlen": 50},
+        {"ylen": 50},
+        {"zlen": 150},
+        {"xlen": 50, "ylen": 70},
+        {"ylen": 50, "xlen": 20},
+        {"ylen": 50, "zlen": 10, "xlen": 20}],
+)
+def test_neighbors_radius_non_periodic_warns_if_dim_set(kwargs):
     with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, ylen=50)
-
-    with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, zlen=150)
-
-    with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, xlen=50, ylen=70)
-
-    with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, ylen=50, xlen=20)
-
-    with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, ylen=50, zlen=10, xlen=20)
-
-    with pytest.warns(UserWarning, match="is set but is not needed for no periodicity"):
-        nu_spa.neighbors_radius(df_neighbor_periodicity, radius=6, periodicity=Periodicity.NONE, xlen=50)
+        nu_spa.neighbors_radius(
+            df_neighbor_periodicity,
+            radius=6,
+            periodicity=Periodicity.NONE,
+            **kwargs
+        )
 
 
 def test_neighbors_radius_periodic_xy_dim_checks():
