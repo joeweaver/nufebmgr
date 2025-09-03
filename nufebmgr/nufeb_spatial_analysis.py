@@ -43,7 +43,8 @@ def neighbors_radius(df: pl.DataFrame, radius: float, periodicity: Periodicity,
     distance. In the case of matching distance, there is no guarantee of order.
     """
     _validate_periodicity_lens(df, periodicity, xlen, ylen, zlen)
-
+    if radius <= 0:
+        raise(ValueError(f'Radius is {radius}, but must be greater than 0'))
     coords = df.select(['x', 'y', 'z']).to_numpy()
     ids = df.select(['id']).to_numpy()
     match periodicity:
@@ -104,7 +105,6 @@ def local_population_structure(df: pl.DataFrame, radius: float, periodicity: Per
     bug type (group).  The values in each column are the counts of bugs of that type within the radius of bug ID (or 0
     if none). There is no guarantee of order. If a bug has no neighbors, it returns 0 for every group
     """
-    # TODO update this to use the periodicity enum
     neighbor_ids = neighbors_radius(df, radius, periodicity, xlen, ylen, zlen)
     rows = [(k, n) for k, vals in neighbor_ids.items() for n in vals]
     if rows != []:
