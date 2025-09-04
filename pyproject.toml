@@ -25,3 +25,6 @@ license = { file = "LICENSE" }
 
 [tool.pytest.ini_options]
 norecursedirs = ["examples"]
+
+[tool.ruff.lint]
+ignore = ["D212"]
