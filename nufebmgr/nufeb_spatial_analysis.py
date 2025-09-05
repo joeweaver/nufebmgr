@@ -150,7 +150,7 @@ def local_population_structure(
     neighbor_ids = neighbors_radius(df, radius, periodicity, xlen, ylen, zlen)
     rows = [(k, n) for k, vals in neighbor_ids.items() for n in vals]
     if rows != []:
-        neighbor_df = pl.DataFrame(rows, schema=["id", "neighbor_id"])
+        neighbor_df = pl.DataFrame(rows, schema=["id", "neighbor_id"], orient='row')
         # ensure all ids appear
         all_ids = pl.DataFrame({"id": list(neighbor_ids.keys())})
         neighbor_df = all_ids.join(neighbor_df, on="id", how="left")

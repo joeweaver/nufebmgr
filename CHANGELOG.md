@@ -1,5 +1,16 @@
 # Changelog
 
+# version 0.1.1
+
+Mainly minor updates as 0.1.0 is put to the test in a real world analysis 
+
+## Fixes
+
+* spatial analysis now explicitly tells polar if frames are created by row. This silences warnings and is less prone to errors
+
+## Enhancements
+
+
 # version 0.1.0
 
 ## Breaking changes
