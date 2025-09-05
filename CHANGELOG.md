@@ -10,6 +10,8 @@ Mainly minor updates as 0.1.0 is put to the test in a real world analysis
 
 ## Enhancements
 
+* Can now apply an absolute value 'bleed' to x and y lengths for periodic distance checks
+  * this allows handling cases where LAMMPS has allowed bugs to temporarily be slightly outside the simulation bounding box 
 
 # version 0.1.0
 

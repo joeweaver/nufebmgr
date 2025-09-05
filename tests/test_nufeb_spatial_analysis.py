@@ -700,10 +700,45 @@ def test_radius_periodic_xy_dim_checks(func,kwargs, message):
         (True, {'xlen': 3.9, 'ylen': 8.9}, 'xlen is specified to 3.9, lower than max x-value of points in dataset: 4.9'),
         (True, {'xlen': 5.9, 'ylen': 6.9}, 'ylen is specified to 6.9, lower than max y-value of points in dataset: 7.9'),
         (True, {'xlen': 3.9, 'ylen': 6.9}, 'xlen, ylen are 3.9, 6.9, lower than max values in dataset:4.9 7.9'),
-        (False, {'xlen': 5.9, 'ylen': 8.9}, 'xlen, ylen are 3.9, 6.9, lower than max values in dataset:4.9 7.9'),
+        (False, {'xlen': 5.9, 'ylen': 8.9}, ''),
     ]
 )
 def test_min_xy_len(func, should_raise, kwargs, message):
+    call_kwargs = _build_call_kwargs(func, 6, Periodicity.XY, kwargs)
+    if should_raise:
+        with pytest.raises(ValueError) as excinfo:
+            func(df_neighbor_periodicity, **call_kwargs)
+        assert message == str(excinfo.value)
+    else:
+        try:
+            func(df_neighbor_periodicity, **call_kwargs)
+        except Exception as e:
+            pytest.fail(f'Unexpected exception {e}')
+
+@pytest.mark.parametrize(
+    "func", [nu_spa.neighbors_radius, nu_spa.local_population_structure, nu_spa.distance_to_each_group]
+)
+@pytest.mark.parametrize(
+    ("should_raise", "kwargs", "message"), [
+        (False, {'xlen': 4.89, 'ylen': 8.9, 'xbleed': 0.1}, ''),
+        (False, {'xlen': 4.891, 'ylen': 8.9, 'xbleed': 0.01}, ''),
+        (False, {'xlen': 4.85, 'ylen': 8.9, 'xbleed': 0.1}, ''),
+        (True, {'xlen': 4.85, 'ylen': 8.9, 'xbleed': 0.01}, 'xlen is specified to 4.85, lower than max x-value of points in dataset: 4.9 with bleed of 0.01'),
+        (False, {'xlen': 4.81, 'ylen': 8.9, 'xbleed': 0.1}, ''),
+        (True, {'xlen': 4.79, 'ylen': 8.9, 'xbleed': 0.1}, 'xlen is specified to 4.79, lower than max x-value of points in dataset: 4.9 with bleed of 0.1'),
+        (False, {'xlen': 5.9, 'ylen': 7.89, 'ybleed': 0.1}, ''),
+        (False, {'xlen': 5.9, 'ylen': 7.891, 'ybleed': 0.01}, ''),
+        (False, {'xlen': 5.9, 'ylen': 7.85, 'ybleed': 0.1}, ''),
+        (True, {'xlen': 5.9, 'ylen': 7.85, 'ybleed': 0.01}, 'ylen is specified to 7.85, lower than max y-value of points in dataset: 7.9 with bleed of 0.01'),
+        (False, {'xlen': 5.9, 'ylen': 7.81, 'ybleed': 0.1}, ''),
+        (True, {'xlen': 5.9, 'ylen': 7.79, 'ybleed': 0.1}, 'ylen is specified to 7.79, lower than max y-value of points in dataset: 7.9 with bleed of 0.1'),
+        (True, {'xlen': 4.8, 'ylen': 7.8, 'xbleed': 0.05, 'ybleed': 0.075}, 'xlen, ylen are 4.8, 7.8, lower than max values in dataset:4.9 7.9 with bleeds of 0.05, 0.075'),
+        (False, {'xlen': 4.81, 'ylen': 7.811, 'xbleed': 0.1, 'ybleed': 0.09}, ''),
+    ]
+)
+def test_min_xy_len_with_bleed(func, should_raise, kwargs, message):
+    """ Bleeds allow dealing with underlying LAMMPS sometimes putting bugs slightly out of bounds
+    """
     call_kwargs = _build_call_kwargs(func, 6, Periodicity.XY, kwargs)
     if should_raise:
         with pytest.raises(ValueError) as excinfo:

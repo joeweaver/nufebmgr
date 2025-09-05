@@ -38,6 +38,8 @@ def neighbors_radius(
     xlen: float = None,
     ylen: float = None,
     zlen: float = None,
+    xbleed: float = 0.0,
+    ybleed: float = 0.0,
 ) -> dict[int, list[int]]:
     """
     Find all neighbours for each point within a radius.
@@ -59,12 +61,14 @@ def neighbors_radius(
     :param xlen: x-dimension length (required for 'xy' periodicity)
     :param ylen: x-dimension length (required for 'xy' periodicity)
     :param zlen: z-dimension length (not yet required )
+    :param xbleed: allow bugs to be slightly outside bounds for len check
+    :param ybleed: allow bugs to be slightly outside bounds for len check
     :return: A dictionary of lists. Each key is an ID of a point in the dataframe.
     The list items are the IDs of neighbors within the search radius, accounting for
     periodicity. The items are sorted in order of increasing distance. In the case of
     matching distance, there is no guarantee of order.
     """
-    _validate_periodicity_lens(df, periodicity, xlen, ylen, zlen)
+    _validate_periodicity_lens(df, periodicity, xlen, ylen, zlen, xbleed, ybleed)
     if radius <= 0:
         raise (ValueError(f"Radius is {radius}, but must be greater than 0"))
     coords = df.select(["x", "y", "z"]).to_numpy()
@@ -132,6 +136,8 @@ def local_population_structure(
     xlen: float = None,
     ylen: float = None,
     zlen: float = None,
+    xbleed: float = 0.0,
+    ybleed: float = 0.0,
 ) -> pl.DataFrame:
     """
     Determine the population structure around a bug.
@@ -142,12 +148,20 @@ def local_population_structure(
     :param xlen: x-dimension length (required for 'xy' periodicity)
     :param ylen: x-dimension length (required for 'xy' periodicity)
     :param zlen: z-dimension length (not yet required )
+    :param xbleed: allow bugs to be slightly outside bounds for len check
+    :param ybleed: allow bugs to be slightly outside bounds for len check
     :return: A polars dataframe with n+1 columns. One column lists the ID of a bug.
     There other n columns are for each bug type (group).  The values in each column are
     the counts of bugs of that type within the radius of bug ID (or 0 if none). There is
     no guarantee of order. If a bug has no neighbors, it returns 0 for every group
     """
-    neighbor_ids = neighbors_radius(df, radius, periodicity, xlen, ylen, zlen)
+    neighbor_ids = neighbors_radius(
+        df,
+        radius,
+        periodicity,
+        xlen, ylen, zlen,
+        xbleed, ybleed
+    )
     rows = [(k, n) for k, vals in neighbor_ids.items() for n in vals]
     if rows != []:
         neighbor_df = pl.DataFrame(rows, schema=["id", "neighbor_id"], orient='row')
@@ -188,6 +202,8 @@ def _validate_periodicity_lens(
     xlen: float = None,
     ylen: float = None,
     zlen: float = None,
+    xbleed: float = 0.0,
+    ybleed: float = 0.0,
 ) -> None:
     """
     Validate x, y, z lengths based on periodicity and data values.
@@ -201,6 +217,8 @@ def _validate_periodicity_lens(
     :param xlen: simulation size in xdim
     :param ylen:  simulation size in ydim
     :param zlen:  simulation size in zdim
+    :param xbleed: allow bugs to be slightly outside bounds for len check
+    :param ybleed: allow bugs to be slightly outside bounds for len check
     :return: None
     """
     match periodicity:
@@ -251,22 +269,35 @@ def _validate_periodicity_lens(
                 raise ValueError(
                     f'Periodicity of "xy" specified but ylen is not > 0. ylen: {ylen}'
                 )
+
             max_x = df.select(["x"]).max().item()
             max_y = df.select(["y"]).max().item()
-            if xlen < max_x and ylen < max_y:
+            # bleeds allow for situations where LAMMPS has briefly allowed
+            # a bug to be slightly out of bounds
+            # build partial string for better error message
+            xbleedstr = ''
+            if xbleed > 0:
+                xbleedstr = f' with bleed of {xbleed}'
+            ybleedstr = ''
+            if ybleed > 0:
+                ybleedstr = f' with bleed of {ybleed}'
+            xybleedstr = ''
+            if xbleed > 0 and ybleed > 0:
+                xybleedstr = f' with bleeds of {xbleed}, {ybleed}'
+            if xlen < (max_x - xbleed) and ylen < (max_y - ybleed):
                 raise ValueError(
                     f"xlen, ylen are {xlen}, {ylen}, "
-                    f"lower than max values in dataset:{max_x} {max_y}"
+                    f"lower than max values in dataset:{max_x} {max_y}{xybleedstr}"
                 )
-            if xlen < max_x:
+            if xlen < max_x - xbleed:
                 raise ValueError(
                     f"xlen is specified to {xlen}, "
-                    f"lower than max x-value of points in dataset: {max_x}"
+                    f"lower than max x-value of points in dataset: {max_x}{xbleedstr}"
                 )
-            if ylen < max_y:
+            if ylen < max_y - ybleed:
                 raise ValueError(
                     f"ylen is specified to {ylen}, "
-                    f"lower than max y-value of points in dataset: {max_y}"
+                    f"lower than max y-value of points in dataset: {max_y}{ybleedstr}"
                 )
         case _:
             raise ValueError(
@@ -281,6 +312,8 @@ def distance_to_each_group(
     xlen: float = None,
     ylen: float = None,
     zlen: float = None,
+    xbleed: float = 0.0,
+    ybleed: float = 0.0,
 ) -> pl.DataFrame:
     """
     List distances to nearest bugs based on group.
@@ -294,10 +327,12 @@ def distance_to_each_group(
     :param xlen: simulation size in xdim
     :param ylen:  simulation size in ydim
     :param zlen:  simulation size in zdim
+    :param xbleed: allow bugs to be slightly outside bounds for len check
+    :param ybleed: allow bugs to be slightly outside bounds for len check
     :return: A dataframe of the form id, type-1-dist, type-1-id, type-2-dist, type-2-id,
              ... type-n-dist, type-n-id
     """
-    _validate_periodicity_lens(df, periodicity, xlen, ylen, zlen)
+    _validate_periodicity_lens(df, periodicity, xlen, ylen, zlen, xbleed, ybleed)
     # TODO DRY out the common stuff regarding distances
     match periodicity:
         case Periodicity.NONE:
