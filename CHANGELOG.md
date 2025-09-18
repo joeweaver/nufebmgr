@@ -12,7 +12,12 @@ Mainly minor updates as 0.1.0 is put to the test in a real world analysis
 
 * Can now apply an absolute value 'bleed' to x and y lengths for periodic distance checks
   * this allows handling cases where LAMMPS has allowed bugs to temporarily be slightly outside the simulation bounding box 
-
+* Initial atom diameter used to be set to [0.5, 0.9] of max diameter. That remains the default. It is now also possible to:
+  * Insist all bugs start at the same diameter, either with a single override or using the diameter specified in the taxon libraries
+    * ``use_identical_initial_diameters``
+  * Set a custom upper and lower bound uniform distribution diameter applied to all taxa 
+    * ``use_uniform_dist_initial_diameters`` 
+  
 # version 0.1.0
 
 ## Breaking changes

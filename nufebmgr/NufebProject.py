@@ -17,8 +17,16 @@ from .BugDumpSpec import BugDumpSpec
 from .HDF5DumpSpec import HDF5DumpSpec
 
 class NufebProject:
+    # TODO move up and annotate things in __init__ which are not passed as args and
+    # have trivial initialisations
     runsteps: int
     biostep: int
+    using_identical_initial_diameters: bool = False
+    overriding_taxon_diameter: bool = False
+    overridden_initial_diameter_microns: float = None
+    using_custom_uniform_dist_initial_diameters = False
+    custom_uniform_dist_initial_diameter_lower = None
+    custom_uniform_dist_initial_diameter_upper = None
 
     # TODO move built-in templates into their own file
     taxa_templates = {"basic_heterotroph": {'growth_strategy':
@@ -334,6 +342,7 @@ class NufebProject:
         for item in d:
             self.active_taxa[item] = d[item]
 
+    # TODO transition to floats as values instead of strings of floats
     def set_composition(self, composition):
         self.composition = composition
 
@@ -402,6 +411,8 @@ class NufebProject:
     def limit_biofilm_height(self,max_height):
         self.max_biofilm_height = max_height
 
+    # TODO transition to ints as values instead of strings of ints
+    # TODO code review for other dicts which do this
     def set_taxa_groups(self, taxa_groups:Dict[str,str]) -> None:
         """
         Sets the dictionary associating taxa names with specific group numbers.
@@ -459,11 +470,21 @@ class NufebProject:
          config_values['atoms'] = df2.reset_index().to_dict(orient='records')
 
          for item in config_values['atoms']:
-             max_diam_i = item['division_strategy']['diameter']
-             diam_i = item['diameter']
-             # Clamp diam_i to 50–90% of max_diam_i
-             item['diameter'] = np.random.uniform(0.5 * max_diam_i, 0.9 * max_diam_i)
-             item['outer_diameter']=item['diameter']
+             if self.using_identical_initial_diameters and self.overriding_taxon_diameter:
+                 if(self.overridden_initial_diameter_microns <= 0):
+                     raise ValueError("Trying to set a bug initial diameter to less than or equal to 0")
+                 item['diameter'] = self.overridden_initial_diameter_microns * 1e-6
+                 item['outer_diameter'] = item['diameter']
+             elif not self.using_identical_initial_diameters and self.using_custom_uniform_dist_initial_diameters:
+                 item['diameter'] = np.random.uniform(self.custom_uniform_dist_initial_diameter_lower * 1e-6,
+                                                      self.custom_uniform_dist_initial_diameter_upper * 1e-6)
+                 item['outer_diameter']=item['diameter']
+             elif not self.using_identical_initial_diameters:
+                 # the was the behaviour before adding other stuff. Keeping as the default case to avoid breaking things
+                 max_diam_i = item['division_strategy']['diameter']
+                 # Clamp diam_i to 50–90% of max_diam_i
+                 item['diameter'] = np.random.uniform(0.5 * max_diam_i, 0.9 * max_diam_i)
+                 item['outer_diameter']=item['diameter']
 
          template_str =\
  """NUFEB Simulation
@@ -714,3 +735,43 @@ class NufebProject:
 
     def vuln_t6ss(self, taxon, effector, prob, to_group):
         self.t6ss_vulns[taxon] = {'effector': effector, 'prob': prob, 'to_group': to_group}
+
+    def use_identical_initial_diameters(
+            self,
+           diameter_microns: float = None
+    ) -> None:
+        """
+        Assign identical initial diameters to all bugs at time 0. This overrides the
+        default where initial bugs are given diameters randomly selected from a
+        uniform distribution around their maximum diameter. The diameter size is
+        determined from either the taxon description or the passed in diameter_microns.
+
+        This takes precedence over using custom uniform distributions, if both are
+        called for some reason.
+
+        Parameters
+        ----------
+        diameter_microns Use this value instead of the one in the taxon description
+
+        """
+        self.using_identical_initial_diameters = True
+        if diameter_microns is not None:
+            self.overriding_taxon_diameter = True
+            self.overridden_initial_diameter_microns = diameter_microns
+
+    def use_uniform_dist_initial_diameters(self,
+                                           lower: float,
+                                           upper: float) -> None:
+        """
+        Assign initial diameters based on a selecting from a uniform distribution
+        given by lower and upper bound. This overrides the
+        default where initial bugs are given diameters randomly selected from a
+        uniform distribution around their maximum diameter.
+        Parameters
+        ----------
+        lower Lower bound of the distribution
+        upper Upper bound of the distribution
+        """
+        self.using_custom_uniform_dist_initial_diameters = True
+        self.custom_uniform_dist_initial_diameter_lower = lower
+        self.custom_uniform_dist_initial_diameter_upper = upper

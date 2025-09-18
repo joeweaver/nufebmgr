@@ -1,6 +1,6 @@
 import pytest
 from nufebmgr.NufebProject import NufebProject
-from typing import Any
+from typing import Any, List
 from pathlib import Path
 from nufebmgr.ChemDumpSpec import ChemDumpSpec
 from nufebmgr.BugDumpSpec import BugDumpSpec
@@ -25,6 +25,14 @@ def test_initialization():
     assert project.track_abs == False
     assert project.track_vol == False
     assert project.spatial_distribution == "even"
+
+    assert project.using_identical_initial_diameters == False
+    assert project.overriding_taxon_diameter == False
+    assert project.overridden_initial_diameter_microns is None
+
+    assert project.using_custom_uniform_dist_initial_diameters == False
+    assert project.custom_uniform_dist_initial_diameter_lower is None
+    assert project.custom_uniform_dist_initial_diameter_upper is None
 
 def test_error_on_assign_taxa_not_all_taxa_have_entries_or_compositions():
     def setup_local(taxa_filename:str) -> NufebProject:
@@ -275,3 +283,86 @@ def test_assign_groups():
         prj.generate_case()
     except Exception as e:
         pytest.fail(f'Unexpected exception {e}')
+
+@pytest.mark.parametrize(
+    "is_constant, const_diameter, lb, ub, seed, expected",
+    [
+        # Identical initial diameters cases
+        ## Using taxon specs, two different seeds
+        (True, None, None, None, 1979,
+         [1.1, 1.5, 1.1, 1.5, 0.8, 0.8, 1.1, 1.1, 0.8]),
+        ### nb this changes because of random assignment to bug groups
+        (True, None, None, None, 2010,
+         [1.1, 1.5, 1.5, 1.1, 1.5, 1.5, 0.8, 0.8, 1.1]),
+        ## Overriding taxon specs, two different seeds
+        (True, 0.85, None, None, 1979,
+         [0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85]),
+        (True, 0.85, None, None, 2010,
+         [0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85]),
+        ## Uniform dists, not based on taxon spec. 3 sets of bounds, 2 seeds each
+        (False, None, 0.5, 0.8, 1979,
+         [0.753, 0.569, 0.611, 0.727, 0.739, 0.734, 0.627, 0.797, 0.730]),
+        (False, None, 0.5, 0.8, 2010,
+         [0.733, 0.562, 0.675, 0.704, 0.565, 0.766, 0.657, 0.724, 0.672]),
+        (False, None, 0.3, 0.6, 1979,
+         [0.553, 0.369, 0.411, 0.527, 0.539, 0.534, 0.427, 0.597, 0.530]),
+        (False, None, 0.3, 0.6, 2010,
+         [0.533, 0.362, 0.475, 0.504, 0.365, 0.566, 0.457, 0.524, 0.472]),
+        (False, None, 0.2, 1.2, 1979,
+         [1.04, 0.431, 0.568, 0.955, 0.996, 0.979, 0.624, 1.19, 0.967]),
+        (False, None, 0.2, 1.2, 2010,
+         [0.978, 0.406, 0.783, 0.880, 0.416, 1.09, 0.725, 0.948, 0.773]),
+        ## Uniform dist around taxon bounds (default behaviour if nothing is set)
+        (False, None, None, None, 1979,
+         [1.14, 1.10, 0.88, 1.49, 0.737, 0.730, 0.911, 1.22, 0.726]),
+        (False, None, None, None, 2010,
+         [1.10, 1.08, 1.36, 1.05, 1.09, 1.59, 0.639, 0.719, 0.991]),
+    ]
+)
+def test_initial_diameters_per_atom(prj: NufebProject, is_constant: bool,
+                                  const_diameter: float, lb: float, ub: float,
+                                  seed: int, expected: List[float]
+                                  ) -> None:
+
+    # common setup
+    prj.use_seed(seed)
+    prj.add_taxon_by_jsonfile(DATA_DIR / "diameter_assignment_test.json")
+    prj.layout_uniform(nbugs=10)
+    prj.set_composition({'big_bug': '33.333',
+                         'small_bug': '33.33',
+                         'medium_bug': '33.33'})
+    prj.set_taxa_groups({'big_bug': '4',
+                        'small_bug': '6',
+                        'medium_bug': '8',
+                         })
+    prj.distribute_spatially_even()
+
+    if is_constant:
+        if const_diameter is None:
+            prj.use_identical_initial_diameters()
+        else:
+            prj.use_identical_initial_diameters(const_diameter)
+    else:
+        if (lb is not None) and (ub is not None):
+            prj.use_uniform_dist_initial_diameters(lb, ub)
+        else:
+            # keeping the conditionals explicitly simple here
+            if (lb is not None) and (ub is None):
+                raise ValueError("Ran into unexpected set lb or ub during testing. Take a look at test parameters")
+            if (lb is None) and (ub is not None):
+                raise ValueError("Ran into unexpected set lb or ub during testing. Take a look at test parameters")
+            if (lb is None) and (ub is None):
+                pass # for a handy breakpoint while testing default case
+
+    atom_text, _ = prj.generate_case()
+
+    # using some hardcoded instances here since it shouldn't be too brittle
+    observed_diameters = [atom_def.split()[2] for atom_def in atom_text.split('\n')[10:19]]
+    # convert expected values to strings with correct units (reported as meters)
+    expected_strs = [f'{d*1e-6:.2e}' for d in expected]
+    # we are testing against known good generations. This is slightly fragile if the
+    # underlying RNG algorithm changes. So check that first if it starts failing. It is
+    # worth it here for the explicit check vs doing, say, a KW test on distributions,
+    # which can result in false positives and negatives and is really just testing
+    # if numpy works, which I believe others have covered.
+    assert observed_diameters == expected_strs
