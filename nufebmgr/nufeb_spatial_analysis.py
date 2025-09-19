@@ -173,27 +173,36 @@ def local_population_structure(
         neighbor_df = pl.DataFrame({"id": list(neighbor_ids.keys())}).with_columns(
             pl.lit(None, pl.UInt32).alias("neighbor_id")
         )
-    # TODO join this all up and do a lazy_eval
-    neighbor_df = neighbor_df.join(
-        df.select(["id", "group"]), left_on="neighbor_id", right_on="id", how="left"
-    ).rename({"group": "neighbor_group"})
-
-    counts = (
-        neighbor_df.group_by(["id", "neighbor_group"]).count().rename({"count": "n"})
-    )
-
-    wide = (
-        counts.pivot(values="n", index="id", columns="neighbor_group")
-        .fill_null(0)
+    neighbor_df_wide = (
+        neighbor_df.lazy()
+        .join(
+            df.lazy().select(["id", "group"]),
+            left_on="neighbor_id", right_on="id", how="left"
+        )
+        .rename({"group": "neighbor_group"})
+        .group_by(["id", "neighbor_group"]).count().rename({"count": "n"})
+        # before lazy, did a pivot. Pivot doesn't work well with lazy frames,
+        # so replaced with group_by->agg
+        #.pivot(values="n", index="id", columns="neighbor_group")
+        .group_by('id')
+        .agg([
+            pl.when(pl.col("neighbor_group") == g)
+                .then(pl.col("n"))
+                .sum()
+                .fill_null(0)
+                .alias(str(g))
+           for g in df.select("group").unique().to_series().to_list()
+        ])
         .sort("id")
         .drop("null", strict=False)
     )
+
     # append any groups which exist but which were not in any neighbor list as all 0's
     all_groups = df["group"].unique().cast(pl.Utf8).to_list()
     for g in all_groups:
-        if g not in wide.columns:
-            wide = wide.with_columns(pl.lit(0, dtype=pl.UInt32).alias(g))
-    return wide
+        if g not in neighbor_df_wide.columns:
+            neighbor_df_wide = neighbor_df_wide.with_columns(pl.lit(0, dtype=pl.UInt32).alias(g))
+    return neighbor_df_wide.collect()
 
 
 def _validate_periodicity_lens(

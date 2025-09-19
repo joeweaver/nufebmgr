@@ -17,7 +17,10 @@ Mainly minor updates as 0.1.0 is put to the test in a real world analysis
     * ``use_identical_initial_diameters``
   * Set a custom upper and lower bound uniform distribution diameter applied to all taxa 
     * ``use_uniform_dist_initial_diameters`` 
-  
+
+## Code Internals
+* continued move towards using polars lazyframes where possible
+
 # version 0.1.0
 
 ## Breaking changes
