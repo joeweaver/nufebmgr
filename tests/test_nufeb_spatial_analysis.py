@@ -508,6 +508,156 @@ def test_distance_to_nearest_of_each_group_periodic():
     result = nu_spa.distance_to_each_group(df_neighbor_periodicity_two,periodicity=nu_spa.Periodicity.XY, xlen=6, ylen=5)
     assert_frame_equal(result, expected, check_column_order=False, check_exact=False)
 
+def test_distance_to_nearest_of_selected_groups_periodic():
+    # ID and Group pasted here for reference
+    #'id':    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    #'group': [1, 1, 2, 2, 3, 1, 2, 2, 1, 3,  1,  1],
+    #group 1: 1, 2, 6, 9, 11, 12
+    #group 2: 3, 4, 7, 8
+    #group 3: 5, 10
+
+    # all-pairs
+    expected_all_pairs = pl.DataFrame({
+        'id': pl.Series([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], dtype=pl.Int64),
+        'type-1-dist': pl.Series([0.5, 0.5, 1.0, 0.5, 1, 1.118033988749895, 1.8027756377319946, 0.5, 1.118033988749895, 1, 1.4142135623730951, 1.4142135623730951], dtype=pl.Float64),
+        'type-1-id': pl.Series([2, 1, 1, 1, 6, 9, 1, 6, 6, 1, 2, 1], dtype=pl.Int64),
+        'type-2-dist': pl.Series([0.5, 0.7071, 1.118033988749895, 1.118033988749895, 1.5, 0.5, 1.414213562370951, 2.1213203435596424, 1.0, 1.414213562370951, 2.0, 1.0], dtype=pl.Float64),
+        'type-2-id': pl.Series([4, 4, 4, 3, 8, 8, 4, 4, 8, 3, 8, 3], dtype=pl.Int64),
+        'type-3-dist': pl.Series([1, 1.118033988749895, 1.414213562370951, 1.5, 2.1213203435596424, 1, 2.6926, 1.5, 1.8027756377319946, 2.1213203435596424, 1.5, 1.0], dtype=pl.Float64),
+        'type-3-id': pl.Series([10, 5, 10, 5, 10, 5, 10, 5, 5, 5, 10, 10], dtype=pl.Int64),})
+
+    # TODO include tests of when a pair code is invalid (<= 0, not an int, not in dataset)
+    # TODO incorporate pair tests with edge cases applicable to distance_to_each_group
+    # TODO test non-periodic as well
+    # TODO case where from-to is the same (easy would be to reject, but better would b
+    # to remove self. just do k=2 and remove 0's. but check that there aren't duplicate coords
+    # AND be sure that result still doesn't have 0's
+    # TODO case where a pair is repeated e.g [(1,2), (1,2)]
+    #group 1: 1, 2, 6, 9, 11, 12
+    #group 3: 5, 10
+    expected_1to3 = pl.DataFrame(
+        {
+            'id': pl.Series(
+                [1, 2, 6, 9, 11, 12],
+                dtype=pl.Int64
+            ),
+            'type-3-dist': pl.Series(
+                [1, 1.118033988749895, 1, 1.8027756377319946, 1.5, 1.0],
+                dtype=pl.Float64
+            ),
+            'type-3-id': pl.Series(
+                # for points 2 and 11, this is actually a tie between 5 and 10
+                # ties are ambiguously resolved right now. The underlying ckdtree is
+                # deterministic but hard to predict, so this shouldn't break
+                [10, 5, 5, 5, 10, 10],
+                dtype=pl.Int64),
+        }
+    )
+    result = nu_spa.distance_to_each_group(
+        df_neighbor_periodicity_two,
+        periodicity=nu_spa.Periodicity.XY,
+        xlen=6, ylen=5,
+        group_pairs=[(1, 3)]
+    )
+    assert_frame_equal(result, expected_1to3, check_column_order=False, check_exact=False)
+
+    expected_3to1 = pl.DataFrame(
+        {
+            'id': pl.Series(
+                [5, 10],
+                dtype=pl.Int64
+            ),
+            'type-1-dist': pl.Series(
+                [1.0, 1.0],
+                dtype=pl.Float64
+            ),
+            'type-1-id': pl.Series(
+                # ties are ambiguously resolved right now. The underlying ckdtree is
+                # deterministic but hard to predict, so this shouldn't break
+                # here the tie is between 1 and 12 for closest type 1 to point 10
+                [6, 1],
+                dtype=pl.Int64),
+        }
+    )
+    result = nu_spa.distance_to_each_group(
+        df_neighbor_periodicity_two,
+        periodicity=nu_spa.Periodicity.XY,
+        xlen=6, ylen=5,
+        group_pairs=[(3, 1)]
+    )
+    assert_frame_equal(result, expected_3to1, check_column_order=False, check_exact=False)
+
+    expected_2to3 = pl.DataFrame(
+        {
+            'id': pl.Series(
+                [3, 4, 7, 8],
+                dtype=pl.Int64
+            ),
+            'type-3-dist': pl.Series(
+                [1.414213, 1.5, 2.6926, 1.5],
+                dtype=pl.Float64
+            ),
+            'type-3-id': pl.Series(
+                # ties are ambiguously resolved right now. The underlying ckdtree is
+                # deterministic but hard to predict, so this shouldn't break
+                [10, 5, 10, 5],
+                dtype=pl.Int64),
+        }
+    )
+    result = nu_spa.distance_to_each_group(
+        df_neighbor_periodicity_two,
+        periodicity=nu_spa.Periodicity.XY,
+        xlen=6, ylen=5,
+        group_pairs=[(2, 3)]
+    )
+    assert_frame_equal(result, expected_2to3, check_column_order=False, check_exact=False)
+
+    expected_3to1_and_2to3 = pl.DataFrame(
+        {
+            'id': pl.Series(
+                [3, 4, 5, 7, 8, 10],
+                dtype=pl.Int64
+            ),
+            'type-3-dist': pl.Series(
+                [1.414213, 1.5, None, 2.6926, 1.5, None],
+                dtype=pl.Float64
+            ),
+            'type-3-id': pl.Series(
+                # ties are ambiguously resolved right now. The underlying ckdtree is
+                # deterministic but hard to predict, so this shouldn't break
+                [10, 5, None, 10, 5, None],
+                dtype=pl.Int64),
+            'type-1-dist': pl.Series(
+                [None, None, 1.0, None, None, 1.0],
+                dtype=pl.Float64
+            ),
+            'type-1-id': pl.Series(
+                # ties are ambiguously resolved right now. The underlying ckdtree is
+                # deterministic but hard to predict, so this shouldn't break
+                [None, None, 6, None, None, 1],
+                dtype=pl.Int64),
+        }
+    )
+    result = nu_spa.distance_to_each_group(
+        df_neighbor_periodicity_two,
+        periodicity=nu_spa.Periodicity.XY,
+        xlen=6, ylen=5,
+        group_pairs=[(3, 1), (2, 3)]
+    )
+    assert_frame_equal(result, expected_3to1_and_2to3, check_column_order=False, check_exact=False)
+
+    # all-pairs, explicit
+    result = nu_spa.distance_to_each_group(
+        df_neighbor_periodicity_two,
+        periodicity=nu_spa.Periodicity.XY,
+        xlen=6, ylen=5,
+        group_pairs=[(1, 1), (1, 2), (1, 3),
+                     (2, 1), (2, 2), (2, 3),
+                     (3, 1), (3, 2), (3, 3)]
+    )
+    assert_frame_equal(result, expected_all_pairs, check_column_order=False,
+                   check_exact=False)
+
 
 def test_distance_to_nearest_of_each_group_one_bug_in_a_group():
     # This is currently a repeat of the non-contig ID test. It is repeated here to show explicit intent.
@@ -579,6 +729,8 @@ def test_distance_to_nearest_of_each_group_non_periodic():
     result = nu_spa.distance_to_each_group(df_neighbor_periodicity_two,periodicity=nu_spa.Periodicity.NONE)
     assert_frame_equal(result, expected, check_column_order=False, check_exact=False)
 
+
+#TODO test case where a point is equidistant in a periodic tile and in the original
 
 def test_local_population_structure_periodic():
     expected_periodic = pl.DataFrame({

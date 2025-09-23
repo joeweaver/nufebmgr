@@ -12,7 +12,7 @@ from enum import Enum
 import numpy as np
 import polars as pl
 from sklearn.neighbors import KDTree
-
+from scipy.spatial import cKDTree
 
 class Periodicity(Enum):
     """
@@ -75,6 +75,7 @@ def neighbors_radius(
     ids = df.select(["id"]).to_numpy()
     match periodicity:
         case Periodicity.NONE:
+            # TODO look into replacing with cKDTree
             tree = KDTree(coords)
             indices, dists = tree.query_radius(
                 coords, r=radius, return_distance=True, sort_results=True
@@ -108,6 +109,7 @@ def neighbors_radius(
                 shifted[:, 1] += dy
                 tiled_coords_list.append(shifted)
             tiled_coords = np.vstack(tiled_coords_list)
+            # TODO look into replacing with cKDTree
             tree = KDTree(tiled_coords)
             indices, dists = tree.query_radius(
                 coords, r=radius, return_distance=True, sort_results=True
@@ -318,11 +320,13 @@ def _validate_periodicity_lens(
 def distance_to_each_group(
     df: pl.DataFrame,
     periodicity: Periodicity,
-    xlen: float = None,
-    ylen: float = None,
-    zlen: float = None,
+    *,
+    xlen: float | None = None,
+    ylen: float | None = None,
+    zlen: float | None = None,
     xbleed: float = 0.0,
     ybleed: float = 0.0,
+    group_pairs: list[tuple[int, int]] | None = None,
 ) -> pl.DataFrame:
     """
     List distances to nearest bugs based on group.
@@ -338,99 +342,244 @@ def distance_to_each_group(
     :param zlen:  simulation size in zdim
     :param xbleed: allow bugs to be slightly outside bounds for len check
     :param ybleed: allow bugs to be slightly outside bounds for len check
+    :param group_pairs: only care about distances from type-a to type-b.
+        Specify as a list of tuples [(a1,b1),(a2,b2)..(an,bn)]
     :return: A dataframe of the form id, type-1-dist, type-1-id, type-2-dist, type-2-id,
              ... type-n-dist, type-n-id
+             The dataframe is sorted by id (increasing). In cases where a subset of
+             pairs is requested( e.g. all pairs of 2-3 and 3-4) if that distance and
+             id was inapplicable for the id, the values on that row will be null
+             in this example, let's say bug ID 5 has a type of 2, then the
+             type-4-dist and type-4-id entries for that bug will be null.
     """
     _validate_periodicity_lens(df, periodicity, xlen, ylen, zlen, xbleed, ybleed)
-    # TODO DRY out the common stuff regarding distances
-    match periodicity:
-        case Periodicity.NONE:
-            # for bookkeeping and individual operations
-            coords = df.select(["x", "y", "z"]).to_numpy()
-            ids = df.select(["id"]).to_numpy().flatten()
-            groups = df.select(["group"]).to_numpy().flatten()
-
-            # Get squared periodic distances
-            periodic_lengths = np.array([xlen, ylen])
-            ## Non-periodic differences
-            diff = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
-            ## avoiding sqrt on N*N since it's not necessary
-            # D = np.sqrt((diff ** 2).sum(axis=2))
-            dist_sq = (diff**2).sum(axis=2)
-
-            # Filter based on group and min squared distance
-            unique_types = np.unique(groups)
-            n_ids = len(ids)
-            columns = {"id": ids}
-            for t in unique_types:
-                mask = np.array(groups).flatten() == t
-                sq_dist_masked = np.where(mask[np.newaxis, :], dist_sq, np.inf)
-
-                if mask.sum() == 1:
-                    # handle the case where a bug is the only one of its type
-                    only_idx = np.where(mask)[0][0]
-                    closest_idx = np.full(n_ids, only_idx)
-                    closest_sq = sq_dist_masked[:, only_idx]
-                    closest_sq[only_idx] = 0.0
-                else:
-                    # avoid self distance for relevant mask
-                    np.fill_diagonal(sq_dist_masked, np.inf)
-                    # get index and calc sqrt for only nearest
-                    closest_idx = sq_dist_masked.argmin(axis=1)
-                    closest_sq = sq_dist_masked[np.arange(n_ids), closest_idx]
-
-                # update dict used to create dataframe
-                columns[f"type-{t}-dist"] = np.sqrt(closest_sq)
-                columns[f"type-{t}-id"] = ids[closest_idx]
-            return pl.DataFrame(columns)
-        case Periodicity.XY:
-            # for bookkeeping and individual operations
-            coords = df.select(["x", "y", "z"]).to_numpy()
-            ids = df.select(["id"]).to_numpy().flatten()
-            groups = df.select(["group"]).to_numpy().flatten()
-
-            # Get squared periodic distances
-            periodic_lengths = np.array([xlen, ylen])
-            ## Non-periodic differences
-            diff = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
-            diff[:, :, :2] = np.abs(diff[:, :, :2])
-            ## adjust x-y for periodicity
-            diff[:, :, :2] = np.minimum(
-                diff[:, :, :2], periodic_lengths - diff[:, :, :2]
+    # Right now splitting out new and old functionality. It is expected the
+    # else branch will eventually be replaced by the general case for 'all possible
+    # pairs'
+    if group_pairs is not None:
+        ldfs = []
+        for a, b in group_pairs:
+            a_coords = (df
+                        .filter(pl.col('group') == a)
+                        .select(["x", "y", "z"])
+                        .to_numpy()
             )
-            ## avoiding sqrt on N*N since it's not necessary
-            # D = np.sqrt((diff ** 2).sum(axis=2))
-            dist_sq = (diff**2).sum(axis=2)
-
-            # Filter based on group and min squared distance
-            unique_types = np.unique(groups)
-            n_ids = len(ids)
-            columns = {"id": ids}
-            for t in unique_types:
-                mask = np.array(groups).flatten() == t
-                sq_dist_masked = np.where(mask[np.newaxis, :], dist_sq, np.inf)
-
-                if mask.sum() == 1:
-                    # handle the case where a bug is the only one of its type
-                    only_idx = np.where(mask)[0][0]
-                    closest_idx = np.full(n_ids, only_idx)
-                    closest_sq = sq_dist_masked[:, only_idx]
-                    closest_sq[only_idx] = 0.0
-                else:
-                    # avoid self distance for relevant mask
-                    np.fill_diagonal(sq_dist_masked, np.inf)
-                    # get index and calc sqrt for only nearest
-                    closest_idx = sq_dist_masked.argmin(axis=1)
-                    closest_sq = sq_dist_masked[np.arange(n_ids), closest_idx]
-
-                # update dict used to create dataframe
-                columns[f"type-{t}-dist"] = np.sqrt(closest_sq)
-                columns[f"type-{t}-id"] = ids[closest_idx]
-            return pl.DataFrame(columns)
-        case _:
-            # Probably caught by _validate_periodicity_lens above, but playing safe
-            raise ValueError(
-                f"Unrecognized periodicity: {periodicity}."
-                f"Must be one of {','.join([p.value for p in Periodicity])}"
+            a_ids = df.filter(pl.col('group') == a).select(["id"]).to_numpy()
+            b_coords = (df
+                        .filter(pl.col('group') == b)
+                        .select(["x", "y", "z"])
+                        .to_numpy()
             )
+            b_ids = df.filter(pl.col('group') == b).select(["id"]).to_numpy()
+            # build tiled coordinate set for periodicity == XY
+            offsets = np.array(
+                [
+                    [0, 0],
+                    [xlen, 0],
+                    [-xlen, 0],
+                    [0, ylen],
+                    [0, -ylen],
+                    [xlen, ylen],
+                    [xlen, -ylen],
+                    [-xlen, ylen],
+                    [-xlen, -ylen],
+                ]
+            )
+            tiled_coords_list = []
+            tiled_b_ids_list = []
+            for dx, dy in offsets:
+                # Shift x and y by tile offsets, leave z unchanged
+                shifted = b_coords.copy()
+                shifted[:, 0] += dx
+                shifted[:, 1] += dy
+                tiled_coords_list.append(shifted)
+                tiled_b_ids_list.append(b_ids)
+            tiled_coords = np.vstack(tiled_coords_list)
+            tiled_b_ids = np.vstack(tiled_b_ids_list).ravel()
+            tree_B = cKDTree(tiled_coords)
+            # getting nearest *two* neighbors to handle cased of self-self distance
+            distances, indices = tree_B.query(a_coords, k=2)
+            # going explicit loop here for ease of understanding
+            # if this is the pain point, we can make it more efficient later
+            # this handles cases of self-distance being 0 (e.g. a pair of 3,3)
+            filtered_dist = []
+            filtered_index = []
+            for d,i in zip(distances, indices):
+                if d[0] == 0:
+                    filtered_dist.append(d[1])
+                    filtered_index.append(i[1])
+                else:
+                    filtered_dist.append(d[0])
+                    filtered_index.append(i[0])
+            ldf = pl.DataFrame({
+                "id": a_ids.flatten(),
+                f"type-{b}-dist": filtered_dist,
+                f"type-{b}-id": tiled_b_ids[filtered_index]
+            }).lazy()
+            ldfs.append(ldf)
+            bp = 1
+        bp = 2
+        combined = ldfs[0]
 
+        if len(ldfs) > 5:
+            bp=3
+        for ldf in ldfs[1:]:
+            # the funkiness with id is to insure it's always there
+            # join keys is dynamic because we want to avoid type-2-id_right, etc
+            # but we cannot just have type-2-id in the keys for every join, because
+            # it croaks when it's not there. using sets of existing columns helps with
+            # the testing and removes the need to make explicit type-N-id etc columns
+            # based on pairs.
+            #join_keys = ["id"]+list(set(combined.columns) & set(ldf.columns) - {'id'})
+            combined = combined.join(ldf, on='id', how='full', coalesce=True, suffix="_nuspa_overlap_col")
+            combined = _coalesce_overlapped_columns(combined, "_nuspa_overlap_col")
+            bp = 40
+            #c.with_columns(pl.coalesce([pl.col('type-1-dist'), pl.col('type-1-dist_right')]).alias('type-1-dist')).drop('type-1-dist_right').collect()
+        c = combined.sort('id').collect()
+        return c
+    else:
+        # TODO DRY out the common stuff regarding distances
+        match periodicity:
+            case Periodicity.NONE:
+                # for bookkeeping and individual operations
+                coords = df.select(["x", "y", "z"]).to_numpy()
+                ids = df.select(["id"]).to_numpy().flatten()
+                groups = df.select(["group"]).to_numpy().flatten()
+
+                # Get squared periodic distances
+                periodic_lengths = np.array([xlen, ylen])
+                ## Non-periodic differences
+                diff = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
+                ## avoiding sqrt on N*N since it's not necessary
+                # D = np.sqrt((diff ** 2).sum(axis=2))
+                dist_sq = (diff**2).sum(axis=2)
+
+                # Filter based on group and min squared distance
+                unique_types = np.unique(groups)
+                n_ids = len(ids)
+                columns = {"id": ids}
+                for t in unique_types:
+                    mask = np.array(groups).flatten() == t
+                    sq_dist_masked = np.where(mask[np.newaxis, :], dist_sq, np.inf)
+
+                    if mask.sum() == 1:
+                        # handle the case where a bug is the only one of its type
+                        only_idx = np.where(mask)[0][0]
+                        closest_idx = np.full(n_ids, only_idx)
+                        closest_sq = sq_dist_masked[:, only_idx]
+                        closest_sq[only_idx] = 0.0
+                    else:
+                        # avoid self distance for relevant mask
+                        np.fill_diagonal(sq_dist_masked, np.inf)
+                        # get index and calc sqrt for only nearest
+                        closest_idx = sq_dist_masked.argmin(axis=1)
+                        closest_sq = sq_dist_masked[np.arange(n_ids), closest_idx]
+
+                    # update dict used to create dataframe
+                    columns[f"type-{t}-dist"] = np.sqrt(closest_sq)
+                    columns[f"type-{t}-id"] = ids[closest_idx]
+                return pl.DataFrame(columns)
+            case Periodicity.XY:
+                # for bookkeeping and individual operations
+                coords = df.select(["x", "y", "z"]).to_numpy()
+                ids = df.select(["id"]).to_numpy().flatten()
+                groups = df.select(["group"]).to_numpy().flatten()
+
+                # Get squared periodic distances
+                periodic_lengths = np.array([xlen, ylen])
+                ## Non-periodic differences
+                diff = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
+                diff[:, :, :2] = np.abs(diff[:, :, :2])
+                ## adjust x-y for periodicity
+                diff[:, :, :2] = np.minimum(
+                    diff[:, :, :2], periodic_lengths - diff[:, :, :2]
+                )
+                ## avoiding sqrt on N*N since it's not necessary
+                # D = np.sqrt((diff ** 2).sum(axis=2))
+                dist_sq = (diff**2).sum(axis=2)
+
+                # Filter based on group and min squared distance
+                unique_types = np.unique(groups)
+                n_ids = len(ids)
+                columns = {"id": ids}
+                for t in unique_types:
+                    mask = np.array(groups).flatten() == t
+                    sq_dist_masked = np.where(mask[np.newaxis, :], dist_sq, np.inf)
+
+                    if mask.sum() == 1:
+                        # handle the case where a bug is the only one of its type
+                        only_idx = np.where(mask)[0][0]
+                        closest_idx = np.full(n_ids, only_idx)
+                        closest_sq = sq_dist_masked[:, only_idx]
+                        closest_sq[only_idx] = 0.0
+                    else:
+                        # avoid self distance for relevant mask
+                        np.fill_diagonal(sq_dist_masked, np.inf)
+                        # get index and calc sqrt for only nearest
+                        closest_idx = sq_dist_masked.argmin(axis=1)
+                        closest_sq = sq_dist_masked[np.arange(n_ids), closest_idx]
+
+                    # update dict used to create dataframe
+                    columns[f"type-{t}-dist"] = np.sqrt(closest_sq)
+                    columns[f"type-{t}-id"] = ids[closest_idx]
+                return pl.DataFrame(columns)
+            case _:
+                # Probably caught by _validate_periodicity_lens above, but playing safe
+                raise ValueError(
+                    f"Unrecognized periodicity: {periodicity}."
+                    f"Must be one of {','.join([p.value for p in Periodicity])}"
+                )
+
+def _coalesce_overlapped_columns(lf: pl.LazyFrame, suffix: str) -> pl.LazyFrame:
+    """
+    Utility function to help merge columns which overlapped during a join.
+    Original use case was in distance_to_each_group. Briefly,
+    that function takes pairs of 'from-type' and 'to-type' and gets minimum distances
+    from each bug of 'from-type' to a bug of 'to-type'. Internally, this results in a
+    frame with cols: id, type-<from-type>-dist, type-<from-type>-id.
+    This works great. But when merging all those together for the return we have to
+    be careful.  a simple join on ids is fine if, between the dataframes
+    type-foo-dist and type-foo-id don't overlap. You just get a column with nulls.
+    Eventually, as you work through pairs, you end up getting overlaps.
+    If they do overlap, it creates a suffixed new
+    column.  Clever tricks with joins using dynamic keys weren't working, so instead,
+    we manually coalesce.
+
+    For safety, the suffix string has to be specified.
+
+    A ValueError is also raised if coalescing would clobber non-null values in the
+    assumed base column. Base column is assumed based on the suffix. So for _ovrlp as
+    a suffix 'foo' would be the assumed base of 'foo_ovrlp'
+    Parameters
+    ----------
+    lf
+    suffix
+
+    Returns
+    -------
+
+    """
+    cols = lf.columns
+    updates = []
+    drops = []
+    for col in cols:
+        if col.endswith(suffix):
+            col_basename = col[: -len(suffix)]
+            if col_basename in cols:
+                # by the logic of how the intended dataframes are created, this should
+                # never occur. But sanity checking to be sure. It also prevents perhaps
+                # unintended use from becoming a footgun.
+                # Basically, making sure the left-hand column is null and not
+                # equal to the right-hand column
+                # TODO write a test that excersises this sanity check to be sure
+                sanity_check = (
+                    (pl.col(col_basename).is_not_null()) &
+                    (pl.col(col_basename) != pl.col(col))
+                )
+                if lf.select(sanity_check).collect().to_series().any():
+                    raise ValueError(f"Coalescing {col_basename} would overwrite non-null values")
+                updates.append(
+                    pl.coalesce([pl.col(col_basename), pl.col(col)]).alias(col_basename)
+                )
+                drops.append(col)
+    return lf.with_columns(updates).drop(drops)
